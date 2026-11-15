@@ -31,11 +31,5 @@
         "command": "vue-tsc -p tsconfig.lib.json --noEmit && vue-tsc -p tsconfig.spec.json --noEmit"
       }
     }
-  },
-  "release": {
-    "version": {
-      "manifestRootsToUpdate": ["dist/{projectRoot}"],
-      "currentVersionResolver": "disk"
-    }
   }
 }

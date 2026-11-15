@@ -182,7 +182,9 @@ pnpm nx run-many -t e2e
 pnpm nx run docs:serve   # docs site with the playground, port 4400
 ```
 
-| Tag           | What it starts                                                           |
-| ------------- | ------------------------------------------------------------------------ |
-| `v0.1.0`      | publishes the four packages to npm as that version, and a GitHub release |
-| `docs-<name>` | rebuilds the docs site and playground from the tip of `main`             |
+| Tag           | What it starts                                                                                             |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
+| `v0.1.0`      | publishes the four packages to npm, and a GitHub release; must match the version in the package.json files |
+| `docs-<name>` | rebuilds the docs site and playground from the tip of `main`                                               |
+
+Cut a release: `pnpm nx release version 0.2.0`, commit, then tag `v0.2.0` and push both.

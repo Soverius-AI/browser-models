@@ -3,12 +3,6 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/agent/browser-models/src",
   "projectType": "library",
-  "release": {
-    "version": {
-      "manifestRootsToUpdate": ["dist/{projectRoot}"],
-      "currentVersionResolver": "disk"
-    }
-  },
   "tags": ["scope:agent", "type:core"],
   "targets": {
     "build": {

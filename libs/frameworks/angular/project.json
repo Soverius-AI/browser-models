@@ -4,12 +4,6 @@
   "sourceRoot": "libs/frameworks/angular/src",
   "prefix": "lib",
   "projectType": "library",
-  "release": {
-    "version": {
-      "manifestRootsToUpdate": ["dist/{projectRoot}"],
-      "currentVersionResolver": "disk"
-    }
-  },
   "tags": ["scope:frameworks", "type:framework"],
   "targets": {
     "build": {

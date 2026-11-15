@@ -83,10 +83,7 @@
   },
   "release": {
     "projects": ["browser-models", "angular", "react", "vue"],
-    "projectsRelationship": "fixed",
-    "version": {
-      "preVersionCommand": "pnpm nx run-many -t build -p browser-models angular react vue"
-    }
+    "projectsRelationship": "fixed"
   },
   "generators": {
     "@nx/react": {
