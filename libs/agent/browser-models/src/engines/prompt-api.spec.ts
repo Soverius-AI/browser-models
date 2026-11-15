@@ -32,6 +32,7 @@ function fakeLanguageModel(model = new FakeModel()) {
         ),
       );
       return {
+        contextWindow: 9216,
         promptStreaming(input, promptOptions) {
           calls.prompts.push(input);
           calls.constraints.push(promptOptions?.responseConstraint);
@@ -72,6 +73,18 @@ describeEngineContract(contractModel, () => {
 describe('PromptApiEngine', () => {
   it('is unavailable when the browser has no Prompt API', async () => {
     expect(await new PromptApiEngine().availability()).toBe('unavailable');
+  });
+
+  it('knows the context size from its first session on', async () => {
+    const { api } = fakeLanguageModel();
+    const engine = new PromptApiEngine({ languageModel: api });
+    expect(engine.contextWindowSize).toBeUndefined();
+
+    await collect(
+      engine.generate({ messages: [{ role: 'user', content: 'Hi' }] }),
+    );
+
+    expect(engine.contextWindowSize).toBe(9216);
   });
 
   it('sends the history as initial prompts and streams the reply', async () => {

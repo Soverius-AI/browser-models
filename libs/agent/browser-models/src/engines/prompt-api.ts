@@ -31,6 +31,9 @@ export interface LanguageModelSession {
     options?: { signal?: AbortSignal; responseConstraint?: unknown },
   ): ReadableStream<string>;
   destroy(): void;
+  /** How many tokens the session holds. Older browsers call it `inputQuota`. */
+  readonly contextWindow?: number;
+  readonly inputQuota?: number;
 }
 
 export interface PromptApiOptions {
@@ -53,6 +56,7 @@ export class PromptApiEngine implements Engine {
   readonly #download: SharedLoad<void>;
   /** The session of the last finished turn, kept for the next turn of the same conversation. */
   #cached: CachedSession | undefined;
+  #contextWindowSize: number | undefined;
 
   constructor(options: PromptApiOptions = {}) {
     const languages = options.languages ?? ['en'];
@@ -65,6 +69,14 @@ export class PromptApiEngine implements Engine {
       (onProgress, signal) => this.#startDownload(onProgress, signal),
       async () => undefined, // the browser keeps the model, there is nothing to free
     );
+  }
+
+  /**
+   * The browser sets the context size and only a session tells it, so it is known from the
+   * first answer on.
+   */
+  get contextWindowSize(): number | undefined {
+    return this.#contextWindowSize;
   }
 
   async availability(): Promise<Availability> {
@@ -108,6 +120,7 @@ export class PromptApiEngine implements Engine {
           initialPrompts: history,
           ...(signal ? { signal } : {}),
         });
+    this.#contextWindowSize = session.contextWindow ?? session.inputQuota;
     const entry: CachedSession = { session, history, busy: true };
     this.#cached = entry;
 

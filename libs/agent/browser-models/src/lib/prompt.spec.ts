@@ -1,5 +1,9 @@
 import type { Message } from '@ag-ui/core';
-import { buildChatMessages } from './prompt.ts';
+import {
+  buildChatMessages,
+  shortenToolResults,
+  toolResultBlock,
+} from './prompt.ts';
 
 describe('buildChatMessages', () => {
   it('tells the model that a tool without a result ran fine', () => {
@@ -25,6 +29,7 @@ describe('buildChatMessages', () => {
       role: 'user',
       content:
         '```tool_result\n{"name":"show_incident","result":"Done. The tool ran and returned no data."}\n```',
+      source: messages[2],
     });
   });
 
@@ -45,7 +50,7 @@ describe('buildChatMessages', () => {
         role: 'system',
         content: 'Be brief.\n\nAnswer in English.\n\nUser name:\nAda',
       },
-      { role: 'user', content: 'Hi' },
+      { role: 'user', content: 'Hi', source: messages[2] },
     ]);
   });
 
@@ -91,10 +96,12 @@ describe('buildChatMessages', () => {
         role: 'assistant',
         content:
           'Checking.\n```tool_call\n{"name": "getWeather", "arguments": {"city":"Graz"}}\n```',
+        source: messages[1],
       },
       {
         role: 'user',
         content: '```tool_result\n{"name":"getWeather","result":"Sunny"}\n```',
+        source: messages[2],
       },
     ]);
   });
@@ -110,7 +117,48 @@ describe('buildChatMessages', () => {
       },
     ];
     expect(buildChatMessages(messages, [], [])).toEqual([
-      { role: 'user', content: 'Hello' },
+      { role: 'user', content: 'Hello', source: messages[0] },
     ]);
+  });
+});
+
+describe('shortenToolResults', () => {
+  it('cuts long results and leaves the text around them', () => {
+    const content = `Before\n${toolResultBlock('search', 'a'.repeat(50))}\nAfter`;
+
+    expect(shortenToolResults(content, 10)).toBe(
+      `Before\n${toolResultBlock('search', 'a'.repeat(10) + '\n… (shortened)')}\nAfter`,
+    );
+  });
+
+  it('cuts every result of a message', () => {
+    const content = [
+      toolResultBlock('one', 'a'.repeat(50)),
+      toolResultBlock('two', 'short'),
+      toolResultBlock('three', 'c\n'.repeat(25)),
+    ].join('\n');
+
+    expect(shortenToolResults(content, 10)).toBe(
+      [
+        toolResultBlock('one', 'a'.repeat(10) + '\n… (shortened)'),
+        toolResultBlock('two', 'short'),
+        toolResultBlock('three', 'c\n'.repeat(5) + '\n… (shortened)'),
+      ].join('\n'),
+    );
+  });
+
+  it('does not cut a result twice', () => {
+    const once = shortenToolResults(
+      toolResultBlock('search', 'a'.repeat(50)),
+      10,
+    );
+
+    expect(shortenToolResults(once, 10)).toBe(once);
+  });
+
+  it('leaves a block alone that is not one of ours', () => {
+    const typed = '```tool_result\nnot json\n```';
+
+    expect(shortenToolResults(typed, 1)).toBe(typed);
   });
 });

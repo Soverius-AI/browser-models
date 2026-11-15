@@ -6,9 +6,15 @@ import {
   type ToolCall as MessageToolCall,
 } from '@ag-ui/core';
 import { AsyncQueue } from './async-queue.ts';
+import type { Compaction, CompactionStatus } from './compaction.ts';
 import type { ChatMessage, Engine } from './engine.ts';
 import { OutputParser, type OutputPart } from './parser.ts';
-import { buildChatMessages, toolCallBlock, toolResultBlock } from './prompt.ts';
+import {
+  buildChatMessages,
+  toolCallBlock,
+  toolResultBlock,
+  type PromptMessage,
+} from './prompt.ts';
 import { ToolCallRepair, type RepairOptions } from './repair.ts';
 import {
   resolveLocalTools,
@@ -29,6 +35,8 @@ export interface RunOptions {
   readonly maxSteps?: number;
   /** Optional last-chance repair hook. */
   readonly repairHook?: RepairOptions['hook'];
+  /** Keeps the conversation within the model's context. Without it nothing is compacted. */
+  readonly compaction?: Compaction;
   readonly signal?: AbortSignal;
 }
 
@@ -67,6 +75,8 @@ interface WrittenCall {
  *   MESSAGES_SNAPSHOT replaces the call (or removes it, when it cannot be repaired). Only then
  *   comes TOOL_CALL_END, so at TOOL_CALL_END the client always holds the repaired call.
  * - Local tools run here and the loop continues with their result.
+ * - Before every model call the compaction may cut the chat to fit the model's context (see
+ *   Compaction).
  * - A frontend tool call ends the run: the client runs it and starts a follow-up run.
  */
 export class AgentRun {
@@ -130,9 +140,12 @@ export class AgentRun {
       (tool) => !clientNames.has(tool.name),
     );
     const tools: ToolSpec[] = [...input.tools, ...localTools];
+    // The whole conversation, plus the tool calls and results this run adds.
     const chat = buildChatMessages(input.messages, input.context, tools);
+    // What the model gets in the current step.
+    let prompt: readonly ChatMessage[] = [];
     const repair = new ToolCallRepair(tools, {
-      reask: (tool, error, raw) => this.#reask(chat, raw, tool, error),
+      reask: (tool, error, raw) => this.#reask(prompt, raw, tool, error),
       ...(this.#options.repairHook ? { hook: this.#options.repairHook } : {}),
     });
 
@@ -140,13 +153,14 @@ export class AgentRun {
     signal.throwIfAborted();
 
     for (let step = 0; step < (this.#options.maxSteps ?? 5); step++) {
+      prompt = yield* this.#compact(chat);
       const reply = new ReplyStream(repair, this.#open);
       const { message } = reply;
       this.#produced.push(message);
       const parser = new OutputParser();
 
       for await (const fragment of engine.generate({
-        messages: chat,
+        messages: prompt,
         signal,
       })) {
         yield* reply.events(parser.push(fragment));
@@ -247,9 +261,38 @@ export class AgentRun {
       }
 
       if (frontendCalled) return;
-      chat.push({ role: 'assistant', content: assistantTurn.join('\n') });
-      chat.push({ role: 'user', content: results.join('\n') });
+      chat.push(
+        { role: 'assistant', content: assistantTurn.join('\n') },
+        { role: 'user', content: results.join('\n') },
+      );
     }
+  }
+
+  /**
+   * The prompt for the next model call: the chat, as the compaction returns it. What the
+   * compaction reports goes to the client as `soverius.compaction` events while it works.
+   */
+  async *#compact(
+    chat: readonly PromptMessage[],
+  ): AsyncGenerator<AgUiEvent, readonly ChatMessage[]> {
+    const { compaction, engine, input } = this.#options;
+    if (!compaction) return chat.map(plain);
+    const reports = new AsyncQueue<CompactionStatus>();
+    const compacted = compaction.compact({
+      threadId: input.threadId,
+      messages: chat,
+      engine,
+      signal: this.#signal,
+      report: (status) => reports.push(status),
+    });
+    compacted.then(
+      () => reports.close(),
+      (error: unknown) => reports.fail(error),
+    );
+    for await (const value of reports) {
+      yield { type: EventType.CUSTOM, name: 'soverius.compaction', value };
+    }
+    return (await compacted).map(plain);
   }
 
   /**
@@ -505,6 +548,11 @@ class ReplyStream {
       };
     }
   }
+}
+
+/** Engines get the role and the text of a message, and nothing else. */
+function plain({ role, content }: ChatMessage): ChatMessage {
+  return { role, content };
 }
 
 /** What is left of `full` after `sent`, or undefined when `full` does not start with `sent`. */

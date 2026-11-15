@@ -16,11 +16,11 @@ WebLLM and transformers.js are imported on first use, so they are not in the ini
 
 The context holds everything the model reads and writes in a run: system prompt, tool descriptions, the conversation, tool results and the reply. The defaults are small.
 
-| Engine          | Default when nothing is passed                                                                                   | Set it with                                     |
-| --------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| WebLLM          | the value the model was built with: `4096` tokens for most prebuilt models, `2048` or `1024` for some small ones | `contextWindowSize`                             |
-| transformers.js | the model's own maximum; the library sets no window                                                              | nothing to set; `maxNewTokens` limits the reply |
-| Prompt API      | set by the browser (`session.contextWindow`)                                                                     | not possible                                    |
+| Engine          | Default when nothing is passed                                                                                   | Set it with                                                            |
+| --------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| WebLLM          | the value the model was built with: `4096` tokens for most prebuilt models, `2048` or `1024` for some small ones | `contextWindowSize`                                                    |
+| transformers.js | the model's own maximum; the library sets no window                                                              | `contextWindowSize`: only the budget for [compaction](./compaction.md) |
+| Prompt API      | set by the browser (`session.contextWindow`)                                                                     | not possible                                                           |
 
 ```ts
 new WebLlmEngine('gemma-4-E2B-it-q4f16_1-MLC', { contextWindowSize: 16384 });
@@ -34,6 +34,7 @@ new WebLlmEngine('gemma-4-E2B-it-q4f16_1-MLC', { contextWindowSize: 16384 });
 
 - `4096` tokens fill quickly with tools: the tool descriptions plus one long tool result are enough. Use `16384` for tool calling, MCP servers and [Open Generative UI](./generative-ui.md). The examples do.
 - A larger window needs more GPU memory.
+- The agent compacts a conversation before it fills the context: see [Compaction](./compaction.md).
 - Keep tool results short: [`maxResultLength`](./tools.md#mcp) of `McpTools` cuts long ones.
 
 ## Prompt API
@@ -101,14 +102,15 @@ new TransformersJsEngine('onnx-community/gemma-4-E4B-it-ONNX', {
 });
 ```
 
-| Option         | Values                                                          | Default                           |
-| -------------- | --------------------------------------------------------------- | --------------------------------- |
-| `task`         | `'text-generation'`, `'image-text-to-text'` (`AutoProcessor`)   | `'text-generation'`               |
-| `device`       | `'webgpu'`, `'wasm'`                                            | `'webgpu'`                        |
-| `dtype`        | `'q4f16'`, `'q4'`, `'q8'`, `'fp16'`, `'fp32'`                   | `'q4f16'` (WebGPU), `'q4'` (WASM) |
-| `maxNewTokens` | `number`: longest reply in tokens                               | `1024`                            |
-| `generation`   | transformers.js generation settings, passed to every run        | `{ do_sample: false }`            |
-| `storage`      | `'cache-api'`, `'opfs'` (global for all transformers.js models) | `'cache-api'`                     |
+| Option              | Values                                                                    | Default                           |
+| ------------------- | ------------------------------------------------------------------------- | --------------------------------- |
+| `task`              | `'text-generation'`, `'image-text-to-text'` (`AutoProcessor`)             | `'text-generation'`               |
+| `device`            | `'webgpu'`, `'wasm'`                                                      | `'webgpu'`                        |
+| `dtype`             | `'q4f16'`, `'q4'`, `'q8'`, `'fp16'`, `'fp32'`                             | `'q4f16'` (WebGPU), `'q4'` (WASM) |
+| `maxNewTokens`      | `number`: longest reply in tokens                                         | `1024`                            |
+| `generation`        | transformers.js generation settings, passed to every run                  | `{ do_sample: false }`            |
+| `contextWindowSize` | `number`: tokens the agent may send before it [compacts](./compaction.md) | none: never compacted             |
+| `storage`           | `'cache-api'`, `'opfs'` (global for all transformers.js models)           | `'cache-api'`                     |
 
 `image-text-to-text` models get text only.
 
@@ -148,12 +150,13 @@ const echo: Engine = {
 };
 ```
 
-| Member                                       | Purpose                                                      |
-| -------------------------------------------- | ------------------------------------------------------------ |
-| `id`                                         | stable id, shown as `engineId` in [Model state](./models.md) |
-| `supportsConstraint`                         | `generate()` can force JSON Schema output with `constraint`  |
-| `availability()`                             | `available` · `downloadable` · `downloading` · `unavailable` |
-| `load({ onProgress, signal })`               | download and load                                            |
-| `generate({ messages, constraint, signal })` | stream text; throws when `signal` aborts                     |
-| `unload()`                                   | free memory, GPU buffers, worker; stop a load in progress    |
-| `delete()`                                   | optional: unload, then remove the download                   |
+| Member                                       | Purpose                                                               |
+| -------------------------------------------- | --------------------------------------------------------------------- |
+| `id`                                         | stable id, shown as `engineId` in [Model state](./models.md)          |
+| `supportsConstraint`                         | `generate()` can force JSON Schema output with `constraint`           |
+| `contextWindowSize`                          | optional: tokens the context holds, for [compaction](./compaction.md) |
+| `availability()`                             | `available` · `downloadable` · `downloading` · `unavailable`          |
+| `load({ onProgress, signal })`               | download and load                                                     |
+| `generate({ messages, constraint, signal })` | stream text; throws when `signal` aborts                              |
+| `unload()`                                   | free memory, GPU buffers, worker; stop a load in progress             |
+| `delete()`                                   | optional: unload, then remove the download                            |
