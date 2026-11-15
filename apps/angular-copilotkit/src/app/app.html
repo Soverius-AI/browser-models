@@ -1,0 +1,81 @@
+<main class="flex h-full flex-col" [style.background]="background()">
+  <header class="border-b border-base-300 bg-base-100">
+    <nav class="navbar min-h-14 flex-wrap gap-2 px-4">
+      <a
+        class="flex items-center gap-2 font-semibold"
+        href="https://soverius.ai"
+        target="_blank"
+      >
+        <img src="favicon.svg" alt="Soverius AI" class="size-7" />
+        <h1 class="text-base font-semibold">browser-models</h1>
+      </a>
+      <span class="badge badge-soft badge-primary">Angular</span>
+      @if (context7.enabled) {
+        <span class="badge badge-soft badge-accent">MCP · Context7</span>
+      }
+
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+        <select
+          class="select select-sm w-72"
+          aria-label="Model"
+          (change)="onModelChange($event)"
+        >
+          @for (id of browserModels.modelIds; track id) {
+            <option
+              [value]="id"
+              [selected]="id === browserModels.selectedModel()"
+            >
+              {{ label(id) }}
+            </option>
+          }
+        </select>
+
+        <span
+          data-testid="model"
+          class="badge badge-soft"
+          [class]="badge(browserModels.availability())"
+        >
+          {{ browserModels.agent.engine(browserModels.selectedModel()).id }} ·
+          {{ browserModels.availability() }}
+        </span>
+
+        @switch (browserModels.availability()) {
+          @case ('downloadable') {
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              (click)="browserModels.download()"
+            >
+              Download the model
+            </button>
+          }
+          @case ('downloading') {
+            <progress
+              class="progress progress-primary w-28"
+              [value]="browserModels.progress() ?? 0"
+            ></progress>
+          }
+        }
+      </div>
+    </nav>
+
+    <div class="flex flex-col gap-2 px-4 pb-3">
+      @if (browserModels.availability() === 'unavailable') {
+        <p role="alert" class="alert alert-warning alert-soft py-2 text-sm">
+          This model cannot run in this browser (no Prompt API or no WebGPU).
+          Pick another one.
+        </p>
+      }
+      @if (browserModels.error(); as error) {
+        <p role="alert" class="alert alert-error alert-soft py-2 text-sm">
+          {{ error }}
+        </p>
+      }
+      <app-models-panel />
+    </div>
+  </header>
+
+  @if (browserModels.ready()) {
+    <copilot-chat class="min-h-0 flex-1" [agentId]="'default'" />
+  }
+</main>

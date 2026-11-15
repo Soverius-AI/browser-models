@@ -1,0 +1,31 @@
+{
+  "name": "@soverius-ai/browser-models-vue",
+  "version": "0.0.1",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "license": "MIT",
+  "homepage": "https://browser-models.soverius.ai",
+  "type": "module",
+  "description": "Vue composables for @soverius-ai/browser-models: model state and debugger wiring.",
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "@soverius-ai/browser-models": "0.0.1"
+  },
+  "module": "./index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Soverius-AI/browser-models.git",
+    "directory": "libs/frameworks/vue"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

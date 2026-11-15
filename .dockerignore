@@ -1,0 +1,12 @@
+node_modules
+dist
+tmp
+coverage
+.git
+.nx
+**/.docusaurus
+apps/docs/static/examples
+.env
+.env.*
+.DS_Store
+*.log

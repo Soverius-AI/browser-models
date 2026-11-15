@@ -1,0 +1,64 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "target": "es2022",
+    "lib": ["es2022", "dom"],
+    "strict": true,
+    "importHelpers": true,
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "paths": {
+      "@soverius-ai/browser-models": [
+        "./libs/agent/browser-models/src/index.ts"
+      ],
+      "@soverius-ai/browser-models-react": [
+        "./libs/frameworks/react/src/index.ts"
+      ],
+      "@soverius-ai/browser-models-vue": ["./libs/frameworks/vue/src/index.ts"],
+      "@soverius-ai/browser-models-angular": [
+        "./libs/frameworks/angular/src/index.ts"
+      ],
+      "@soverius-ai/browser-models/agent": [
+        "./libs/agent/browser-models/src/agent.ts"
+      ],
+      "@soverius-ai/browser-models/prompt-api": [
+        "./libs/agent/browser-models/src/prompt-api.ts"
+      ],
+      "@soverius-ai/browser-models/web-llm": [
+        "./libs/agent/browser-models/src/web-llm.ts"
+      ],
+      "@soverius-ai/browser-models/web-llm/worker": [
+        "./libs/agent/browser-models/src/web-llm-worker.ts"
+      ],
+      "@soverius-ai/browser-models/transformers": [
+        "./libs/agent/browser-models/src/transformers.ts"
+      ],
+      "@soverius-ai/example-shared": ["./libs/examples/shared/src/index.ts"],
+      "@soverius-ai/browser-models/webmcp": [
+        "./libs/agent/browser-models/src/webmcp.ts"
+      ],
+      "@soverius-ai/browser-models/mcp": [
+        "./libs/agent/browser-models/src/mcp.ts"
+      ],
+      "@soverius-ai/browser-models/copilotkit": [
+        "./libs/agent/browser-models/src/copilotkit.ts"
+      ]
+    },
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
+  },
+  "exclude": ["node_modules", "tmp"]
+}

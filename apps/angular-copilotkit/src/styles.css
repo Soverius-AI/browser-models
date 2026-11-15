@@ -1,0 +1,15 @@
+@import '@copilotkit/angular/styles.css';
+@import '../../../libs/examples/shared/src/theme.css';
+@source './';
+
+app-root {
+  display: block;
+  height: 100%;
+}
+
+/* CopilotKit paints the chat with its --background colour. Make it transparent, so the page
+   background that the change_background tool sets is visible behind the chat. */
+copilot-chat[data-copilotkit],
+copilot-chat[data-copilotkit] * {
+  --background: transparent;
+}

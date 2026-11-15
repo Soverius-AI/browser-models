@@ -1,0 +1,46 @@
+{
+  "name": "docs",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/docs",
+  "tags": ["scope:examples", "type:app"],
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docusaurus start apps/docs --port 4400"
+      },
+      "dependsOn": ["examples"]
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/apps/docs"],
+      "options": {
+        "command": "docusaurus build apps/docs --out-dir ../../dist/apps/docs"
+      },
+      "dependsOn": ["examples"]
+    },
+    "serve-static": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": {
+        "command": "docusaurus serve apps/docs --dir ../../dist/apps/docs --port 4401 --no-open"
+      }
+    },
+    "examples": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/static/examples"],
+      "options": {
+        "parallel": false,
+        "commands": [
+          "rm -rf apps/docs/static/examples dist/docs-examples && mkdir -p apps/docs/static/examples",
+          "pnpm nx run angular-copilotkit:build:production --excludeTaskDependencies --base-href=/examples/angular/ --outputPath=dist/docs-examples/angular",
+          "cp -R dist/docs-examples/angular/browser apps/docs/static/examples/angular",
+          "cd apps/react-copilotkit && pnpm exec vite build --base /examples/react/ --outDir ../docs/static/examples/react --emptyOutDir",
+          "cd apps/vue-copilotkit && pnpm exec vite build --base /examples/vue/ --outDir ../docs/static/examples/vue --emptyOutDir",
+          "cd apps/vanilla-agui && pnpm exec vite build --base /examples/vanilla/ --outDir ../docs/static/examples/vanilla --emptyOutDir"
+        ]
+      }
+    }
+  }
+}

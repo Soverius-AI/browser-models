@@ -1,0 +1,35 @@
+name: CI
+
+# Checks everything that changed. Releases and the docs site have their own workflows, started by tags:
+# release.yml (v*) and docs.yml (docs-*).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  actions: read # nrwl/nx-set-shas reads earlier workflow runs to find the last green commit
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - uses: nrwl/nx-set-shas@v4
+
+      - run: pnpm nx format:check
+      - run: pnpm nx affected -t lint test build typecheck publint e2e

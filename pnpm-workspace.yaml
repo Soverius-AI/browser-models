@@ -1,0 +1,14 @@
+allowBuilds:
+  nx: true
+  '@swc/core': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
+  '@parcel/watcher': true
+  # Node-only binaries of transformers.js; the browser build does not need them.
+  onnxruntime-node: false
+  protobufjs: false
+  # Install-time telemetry of a CopilotKit dependency; not needed.
+  '@scarf/scarf': false
+  # Funding message only.
+  core-js: false

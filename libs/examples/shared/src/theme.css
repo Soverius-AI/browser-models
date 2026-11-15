@@ -1,0 +1,53 @@
+/*
+ * Tailwind + daisyUI with the soverius.ai theme, shared by all examples.
+ * Each app imports this file and adds `@source` for its own templates.
+ */
+@import 'tailwindcss' source(none);
+@source './lib';
+@plugin 'daisyui' {
+  themes: false;
+}
+
+@plugin 'daisyui/theme' {
+  name: 'soverius-light';
+  default: true;
+  color-scheme: light;
+  --color-primary: #004871;
+  --color-primary-content: #f5f9fb;
+  --color-secondary: #dd6300;
+  --color-secondary-content: #fff;
+  --color-accent: #0071a9;
+  --color-accent-content: #f5f9fb;
+  --color-neutral: #1a2b36;
+  --color-neutral-content: #e5e8eb;
+  /* Base colours one step lighter than soverius.ai, so the chat surface is white. */
+  --color-base-100: #ffffff;
+  --color-base-200: #f4f7fa;
+  --color-base-300: #d4dce2;
+  --color-base-content: #04131d;
+  --color-info: #0083be;
+  --color-info-content: #f5f9fb;
+  --color-success: #009351;
+  --color-success-content: #f6f9f7;
+  --color-warning: #ef9716;
+  --color-warning-content: #1f1307;
+  --color-error: #cc272e;
+  --color-error-content: #fcf7f7;
+  --radius-selector: 1rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@theme {
+  --font-sans: Inter, system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}

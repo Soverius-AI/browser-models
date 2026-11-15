@@ -1,0 +1,5 @@
+{
+  "name": "docs",
+  "private": true,
+  "description": "No \"type\" field on purpose: Docusaurus' generated files need webpack's default module handling, not the workspace root's \"type\": \"module\"."
+}

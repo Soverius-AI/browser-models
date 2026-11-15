@@ -1,0 +1,81 @@
+name: Release
+
+# Publishes the @soverius-ai/browser-models packages to npm when a version tag is pushed:
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# The tag is the version. It is written into the built packages; the package.json files in the
+# repository stay at 0.0.1. A version with a suffix (v0.2.0-beta.1) is published under the npm tag
+# `next`, not `latest`. Afterwards a GitHub release with generated notes is created.
+#
+# Started by hand, it is a dry run for the given version: nothing is published.
+#
+#   secret NPM_TOKEN   an npm token that may publish the @soverius-ai packages
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version for the dry run, for example 0.1.0
+        required: true
+
+permissions:
+  contents: write # create the GitHub release
+  id-token: write # npm provenance
+
+env:
+  PACKAGES: browser-models angular react vue
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      REQUESTED: ${{ github.event_name == 'push' && github.ref_name || inputs.version }}
+      DRY_RUN: ${{ github.event_name != 'push' && '--dry-run' || '' }}
+    steps:
+      - name: Check the version and the npm token
+        run: |
+          version="${REQUESTED#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::\"$REQUESTED\" is not a version like v1.2.3 or v1.2.3-beta.1"
+            exit 1
+          fi
+          if [ -z "$DRY_RUN" ] && [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::Secret NPM_TOKEN is not set; nothing was published"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          # Pre-releases must not become what `npm install` gives by default.
+          [[ "$version" == *-* ]] && echo "NPM_TAG=next" >> "$GITHUB_ENV" || echo "NPM_TAG=latest" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      # Before the version is written: a later build would put the built packages back to 0.0.1.
+      - run: pnpm nx run-many -t lint test typecheck publint -p $PACKAGES
+
+      - name: Build the packages and write the version into them
+        run: pnpm nx release version "$VERSION" --stage-changes=false --git-commit=false --git-tag=false $DRY_RUN
+
+      - name: Publish to npm
+        run: pnpm nx release publish --tag "$NPM_TAG" $DRY_RUN
+        env:
+          # npm only accepts provenance from public repositories.
+          NPM_CONFIG_PROVENANCE: ${{ !github.event.repository.private }}
+
+      - name: Create the GitHub release
+        if: ${{ github.event_name == 'push' }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes ${{ contains(github.ref_name, '-') && '--prerelease' || '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}

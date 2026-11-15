@@ -1,0 +1,10 @@
+{
+  "name": "vanilla-agui-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/vanilla-agui-e2e/src",
+  "projectType": "application",
+  "tags": [],
+  "implicitDependencies": ["vanilla-agui"],
+  "// targets": "to see all targets run: nx show project vanilla-agui-e2e --web",
+  "targets": {}
+}

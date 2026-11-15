@@ -1,0 +1,20 @@
+{
+  "name": "@soverius-ai/browser-models-angular",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/core": "^22.2.0",
+    "@soverius-ai/browser-models": "0.0.1"
+  },
+  "sideEffects": false,
+  "license": "MIT",
+  "homepage": "https://browser-models.soverius.ai",
+  "description": "Angular layer for @soverius-ai/browser-models: provideBrowserModels(), signals, debugger wiring.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Soverius-AI/browser-models.git",
+    "directory": "libs/frameworks/angular"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

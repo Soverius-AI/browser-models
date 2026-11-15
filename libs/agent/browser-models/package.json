@@ -1,0 +1,87 @@
+{
+  "name": "@soverius-ai/browser-models",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "@ag-ui/client": "1.0.2",
+    "@ag-ui/core": "1.0.2",
+    "jsonrepair": "^3.15.0",
+    "rxjs": "7.8.1",
+    "tslib": "^2.3.0",
+    "zod": "^4.2.0"
+  },
+  "sideEffects": false,
+  "license": "MIT",
+  "homepage": "https://browser-models.soverius.ai",
+  "description": "Run models in the browser (Prompt API, WebLLM, transformers.js) as AG-UI agents.",
+  "peerDependencies": {
+    "@mlc-ai/web-llm": "^0.2.88",
+    "@huggingface/transformers": "^4.3.2"
+  },
+  "peerDependenciesMeta": {
+    "@mlc-ai/web-llm": {
+      "optional": true
+    },
+    "@huggingface/transformers": {
+      "optional": true
+    }
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./agent": {
+      "types": "./src/agent.d.ts",
+      "import": "./src/agent.js",
+      "default": "./src/agent.js"
+    },
+    "./prompt-api": {
+      "types": "./src/prompt-api.d.ts",
+      "import": "./src/prompt-api.js",
+      "default": "./src/prompt-api.js"
+    },
+    "./web-llm": {
+      "types": "./src/web-llm.d.ts",
+      "import": "./src/web-llm.js",
+      "default": "./src/web-llm.js"
+    },
+    "./web-llm/worker": {
+      "types": "./src/web-llm-worker.d.ts",
+      "import": "./src/web-llm-worker.js",
+      "default": "./src/web-llm-worker.js"
+    },
+    "./transformers": {
+      "types": "./src/transformers.d.ts",
+      "import": "./src/transformers.js",
+      "default": "./src/transformers.js"
+    },
+    "./webmcp": {
+      "types": "./src/webmcp.d.ts",
+      "import": "./src/webmcp.js",
+      "default": "./src/webmcp.js"
+    },
+    "./mcp": {
+      "types": "./src/mcp.d.ts",
+      "import": "./src/mcp.js",
+      "default": "./src/mcp.js"
+    },
+    "./copilotkit": {
+      "types": "./src/copilotkit.d.ts",
+      "import": "./src/copilotkit.js",
+      "default": "./src/copilotkit.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Soverius-AI/browser-models.git",
+    "directory": "libs/agent/browser-models"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

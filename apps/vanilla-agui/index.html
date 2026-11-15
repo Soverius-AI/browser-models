@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>browser-models · AG-UI client example · Soverius AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+    />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <main class="flex h-full flex-col">
+      <header class="border-b border-base-300 bg-base-100">
+        <nav class="navbar min-h-14 flex-wrap gap-2 px-4">
+          <a
+            class="flex items-center gap-2 font-semibold"
+            href="https://soverius.ai"
+            target="_blank"
+          >
+            <img src="/favicon.svg" alt="Soverius AI" class="size-7" />
+            <h1 class="text-base font-semibold">browser-models</h1>
+          </a>
+          <span class="badge badge-soft badge-primary">AG-UI client</span>
+
+          <div class="ml-auto flex flex-wrap items-center gap-2">
+            <select
+              id="model"
+              class="select select-sm w-72"
+              aria-label="Model"
+            ></select>
+            <span
+              data-testid="model"
+              id="status"
+              class="badge badge-soft"
+            ></span>
+            <button
+              id="download"
+              type="button"
+              class="btn btn-primary btn-sm"
+              hidden
+            >
+              Download the model
+            </button>
+            <progress
+              id="progress"
+              class="progress progress-primary w-28"
+              hidden
+            ></progress>
+          </div>
+        </nav>
+        <p class="px-4 pb-3 text-sm opacity-70">
+          No CopilotKit: this page talks to the agent with
+          <code class="font-mono">@ag-ui/client</code> directly.
+        </p>
+        <div
+          class="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-base-300 bg-base-200 px-4 py-2 text-sm"
+        >
+          <label class="flex items-center gap-2 font-medium">
+            <input
+              id="context7"
+              type="checkbox"
+              class="toggle toggle-primary toggle-sm"
+            />
+            Use Context7
+          </label>
+          <input
+            id="context7-key"
+            type="password"
+            class="input input-sm w-64"
+            placeholder="Context7 API key (optional)"
+            aria-label="Context7 API key (optional)"
+            autocomplete="off"
+          />
+          <p class="min-w-64 flex-1 text-xs opacity-70">
+            Library docs from a remote MCP server; try
+            <code class="font-mono">docs for react</code>. The key is sent only
+            to mcp.context7.com and kept in this tab.
+            <a
+              class="link"
+              href="https://context7.com/dashboard"
+              target="_blank"
+              rel="noreferrer"
+              >Get a key</a
+            >. Unlike the local <code class="font-mono">/mcp</code> demo server,
+            Context7 also works in the static playground build.
+          </p>
+        </div>
+      </header>
+
+      <ol
+        id="messages"
+        class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-1 overflow-y-auto p-4"
+      ></ol>
+
+      <form id="chat" class="mx-auto flex w-full max-w-3xl gap-2 p-4">
+        <input
+          id="input"
+          type="text"
+          class="input flex-1"
+          placeholder="Type a message..."
+          autocomplete="off"
+        />
+        <button type="submit" class="btn btn-primary">Send</button>
+      </form>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

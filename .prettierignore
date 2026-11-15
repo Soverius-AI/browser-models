@@ -1,0 +1,13 @@
+# Add files here to ignore them from prettier formatting
+/dist
+/coverage
+/.nx/cache
+/.nx/workspace-data
+.nx/self-healing
+.angular
+
+# Copied as-is from the CopilotKit docs
+apps/angular-copilotkit/src/app/copilotkit-docs/*.component.ts
+apps/angular-copilotkit/src/app/copilotkit-docs/tool-feature-model.ts
+apps/react-copilotkit/src/app/copilotkit-docs/*.tsx
+apps/vue-copilotkit/src/app/copilotkit-docs/*.vue

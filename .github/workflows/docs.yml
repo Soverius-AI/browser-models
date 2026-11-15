@@ -1,0 +1,45 @@
+name: Docs
+
+# Updates https://browser-models.soverius.ai (docs site and playground) when a docs tag is pushed:
+#
+#   git tag docs-2026-11-15 && git push origin docs-2026-11-15
+#
+# Coolify builds the tip of main with the root Dockerfile, so the tag must point at that commit.
+#
+#   secrets COOLIFY_URL, COOLIFY_TOKEN   the Coolify instance and an API token with the `deploy` ability
+#   secret  COOLIFY_DOCS_UUID            the Coolify application of the docs site
+on:
+  push:
+    tags: ['docs-*']
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+      COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+      COOLIFY_DOCS_UUID: ${{ secrets.COOLIFY_DOCS_UUID }}
+    steps:
+      - name: Check that the tag points at the tip of main
+        run: |
+          main=$(git ls-remote "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" refs/heads/main | cut -f1)
+          if [ "$main" != "$GITHUB_SHA" ]; then
+            echo "::error::$GITHUB_REF_NAME is at $GITHUB_SHA, but main is at $main. Tag the tip of main."
+            exit 1
+          fi
+
+      - name: Ask Coolify to build and deploy main
+        run: |
+          if [ -z "$COOLIFY_URL" ] || [ -z "$COOLIFY_TOKEN" ] || [ -z "$COOLIFY_DOCS_UUID" ]; then
+            echo "::error::COOLIFY_URL, COOLIFY_TOKEN or COOLIFY_DOCS_UUID is not set; the docs site was not deployed"
+            exit 1
+          fi
+          curl --fail --silent --show-error -X POST \
+            "${COOLIFY_URL%/}/api/v1/deploy?uuid=$COOLIFY_DOCS_UUID&force=true" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN"
+          echo
+          echo "::notice::Coolify is deploying the docs site from $GITHUB_REF_NAME ($GITHUB_SHA)"
