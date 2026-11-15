@@ -87,15 +87,16 @@ new McpTools({
 });
 ```
 
-| Option      | Default                                      |
-| ----------- | -------------------------------------------- |
-| `url`       | required: the Streamable HTTP endpoint       |
-| `namespace` | none; `ns` → tool names `ns__<name>`         |
-| `headers`   | none; called on every request, sync or async |
-| `filter`    | all server tools                             |
-| `confirm`   | `window.confirm`                             |
-| `fetch`     | global `fetch`                               |
-| `timeout`   | `30_000` ms per request                      |
+| Option            | Default                                                                  |
+| ----------------- | ------------------------------------------------------------------------ |
+| `url`             | required: the Streamable HTTP endpoint                                   |
+| `namespace`       | none; `ns` → tool names `ns__<name>`                                     |
+| `headers`         | none; called on every request, sync or async                             |
+| `filter`          | all server tools                                                         |
+| `confirm`         | `window.confirm`                                                         |
+| `fetch`           | global `fetch`                                                           |
+| `timeout`         | `30_000` ms per request                                                  |
+| `maxResultLength` | `3000` characters of text per tool result; longer text is cut and marked |
 
 | Aspect            | Behaviour                                                 |
 | ----------------- | --------------------------------------------------------- |

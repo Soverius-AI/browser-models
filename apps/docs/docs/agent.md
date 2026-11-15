@@ -74,6 +74,8 @@ const stop = agent.connectDevtools();
 
 No-op without `window` (SSR). `agentId` is `'default'` when the agent has none.
 
+Call `stop()` to switch it off again. The [Playground](/playground) has a "Devtools" switch that lists these events; the examples switch them on in dev mode and with `?devtools`.
+
 | Framework | Devtools                       |
 | --------- | ------------------------------ |
 | Angular   | `withDevtools()`               |

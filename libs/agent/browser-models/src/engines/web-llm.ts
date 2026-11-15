@@ -4,7 +4,11 @@ import type {
   GenerateRequest,
   LoadOptions,
 } from '../lib/engine.ts';
-import type { AppConfig, MLCEngineInterface } from '@mlc-ai/web-llm';
+import type {
+  AppConfig,
+  ChatOptions,
+  MLCEngineInterface,
+} from '@mlc-ai/web-llm';
 import { SharedLoad } from './shared-load.ts';
 
 type WebLlmLibrary = typeof import('@mlc-ai/web-llm');
@@ -18,6 +22,19 @@ export interface WebLlmOptions {
   readonly worker?: () => Worker;
   /** WebLLM app config, for example `{ ...prebuiltAppConfig, cacheBackend: 'opfs' }`. */
   readonly appConfig?: AppConfig;
+  /**
+   * How many tokens fit into the model's context: system prompt, tool descriptions, the whole
+   * conversation, tool results and the reply. Default: what the model was built with, 4096 for
+   * nearly every prebuilt WebLLM model (1024 for the smallest). A run that needs more fails with
+   * WebLLM's `ContextWindowSizeExceededError`. A larger window needs more GPU memory.
+   */
+  readonly contextWindowSize?: number;
+  /**
+   * Any other WebLLM chat option, passed to `reload()` as it is: `temperature`, `top_p`,
+   * `repetition_penalty`, `sliding_window_size` and so on. `contextWindowSize` wins over
+   * `context_window_size` in here.
+   */
+  readonly chatOptions?: ChatOptions;
 }
 
 /** A WebLLM engine and the worker it runs in, if any. */
@@ -136,7 +153,7 @@ export class WebLlmEngine implements Engine {
     const stop = () => void free(loaded).catch(() => undefined);
     signal.addEventListener('abort', stop);
     try {
-      await loaded.mlc.reload(this.#modelId);
+      await loaded.mlc.reload(this.#modelId, this.#chatOptions());
     } catch (error) {
       // A failed load must not leave a worker behind.
       if (!signal.aborted) await free(loaded).catch(() => undefined);
@@ -147,6 +164,13 @@ export class WebLlmEngine implements Engine {
     // WebLLM returns quietly from a stopped download.
     signal.throwIfAborted();
     return loaded;
+  }
+
+  /** What `reload()` gets: the user's chat options, with the context size on top. */
+  #chatOptions(): ChatOptions | undefined {
+    const { chatOptions, contextWindowSize } = this.#options;
+    if (contextWindowSize === undefined) return chatOptions;
+    return { ...chatOptions, context_window_size: contextWindowSize };
   }
 
   /** WebLLM is large: it is imported on first use, once per engine. */

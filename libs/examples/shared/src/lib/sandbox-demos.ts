@@ -93,3 +93,20 @@ function initializeChart() {
 }`,
   jsExpressions: ['initializeChart()'],
 };
+
+/**
+ * Design guidelines for the model, for CopilotKit's `openGenerativeUI.designSkill`. CopilotKit's
+ * own are written for large models; these are short and concrete, so that a small model in the
+ * browser has a pattern to follow.
+ */
+export const sandboxDesignSkill = `Rules for generateSandboxedUi. Keep the page small.
+- css: a few plain rules.
+- html: plain HTML, single quotes for attributes.
+- jsFunctions: define EVERY function you call. Never leave it empty when jsExpressions calls a function.
+- jsExpressions: only calls of functions from jsFunctions, for example ["draw()"].
+- Invent sensible sample data when the user gives none. Do not ask for data.
+
+To draw a chart, use exactly this pattern:
+html: <script src='https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js'></script><canvas id='chart'></canvas>
+jsFunctions: function draw() { if (!window.Chart) { setTimeout(draw, 50); return; } new Chart(document.getElementById('chart'), { type: 'bar', data: { labels: ['A', 'B', 'C'], datasets: [{ label: 'Values', data: [3, 5, 2] }] } }); }
+jsExpressions: ["draw()"]`;

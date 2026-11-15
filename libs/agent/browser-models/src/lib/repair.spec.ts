@@ -81,12 +81,28 @@ describe('ToolCallRepair.readPartial', () => {
 
   it('waits for the complete name, then repairs it', () => {
     expect(repair.readPartial('{"name": "get_wea')).toBeUndefined();
-    expect(repair.readPartial('{"name": "get_weather"')).toBeUndefined();
+    // The closing quote ends the name.
+    expect(repair.readPartial('{"name": "get_weather"')).toEqual({
+      name: 'getWeather',
+      argumentsJson: '',
+    });
     expect(repair.readPartial('{"name": "get_weather", "arg')).toEqual({
       name: 'getWeather',
       argumentsJson: '',
     });
     expect(repair.readPartial('{"name": "sendEmail", "arg')).toBe(undefined);
+  });
+
+  it('keeps code inside a string in one piece', () => {
+    // A model writing JavaScript into a string: brackets and commas in it are not structure.
+    const args = `{"html": "<div class='c'></div>", "jsExpressions": ["new Chart(document.getElementById('c'), { type: 'bar', data: { labels: ['A', 'B'] } })", "run()"]}`;
+    const raw = `{"name": "getWeather", "arguments": ${args}}`;
+    const final = JSON.stringify(JSON.parse(args));
+
+    for (let length = 1; length <= raw.length; length++) {
+      const partial = repair.readPartial(raw.slice(0, length));
+      if (partial) expect(final.startsWith(partial.argumentsJson)).toBe(true);
+    }
   });
 
   it('only returns arguments that the rest of the call cannot change', () => {

@@ -102,4 +102,31 @@ describe('OutputParser thinking', () => {
       { kind: 'text', text: 'It is sunny.' },
     ]);
   });
+
+  it('drops a tool result the model echoes, also when it arrives in pieces', () => {
+    const echo =
+      'Done.\n```tool_result\n{"name":"generateSandboxedUi","result":"UI generated"}\n```\nAnything else?';
+    for (const size of [1, 7, echo.length]) {
+      const parser = new OutputParser();
+      const parts = [
+        ...(echo.match(new RegExp(`.{1,${size}}`, 'gs')) ?? []).flatMap(
+          (piece) => parser.push(piece),
+        ),
+        ...parser.end(),
+      ];
+      const text = parts
+        .map((part) => (part.kind === 'text' ? part.text : `[${part.kind}]`))
+        .join('');
+      expect(text).toBe('Done.\n\nAnything else?');
+    }
+  });
+
+  it('drops an echoed tool result that is never closed', () => {
+    const parser = new OutputParser();
+    const parts = [
+      ...parser.push('```tool_result\n{"name":"x","result":"y"}'),
+      ...parser.end(),
+    ];
+    expect(parts).toEqual([]);
+  });
 });

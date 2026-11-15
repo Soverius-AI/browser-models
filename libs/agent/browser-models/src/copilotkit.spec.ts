@@ -140,4 +140,49 @@ describe('OpenGenerativeUi', () => {
 
     expect(await run(events)).toEqual(events);
   });
+
+  it('shows the repaired page when the agent corrects a streamed call', async () => {
+    const [start, ...rest] = toolCall(
+      'generateSandboxedUi',
+      { ...page, html: '<h1>Hel' },
+      400,
+    );
+    const end = rest.at(-1);
+    const correction = {
+      type: EventType.MESSAGES_SNAPSHOT,
+      messages: [
+        {
+          id: 'm1',
+          role: 'assistant',
+          toolCalls: [
+            {
+              id: 'call-1',
+              type: 'function',
+              function: {
+                name: 'generateSandboxedUi',
+                arguments: JSON.stringify({
+                  ...page,
+                  css: 'h1 { color: blue; }',
+                }),
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const events = await run([
+      start,
+      ...rest.slice(0, -1),
+      correction,
+      end,
+    ] as BaseEvent[]);
+
+    const last = activities(events).at(-1)?.content;
+    expect(last).toMatchObject({
+      generating: false,
+      css: 'h1 { color: blue; }',
+      jsExpressions: page.jsExpressions,
+    });
+    expect(last?.html?.join('')).toBe(page.html);
+  });
 });

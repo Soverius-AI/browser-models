@@ -10,20 +10,19 @@ import { demoEngine } from './demo-engine';
  * the app so its bundler (Angular or Vite) can find the worker file.
  */
 export function createExampleModels(webLlmWorker: () => Worker) {
+  // WebLLM models default to 4096 tokens. Tool descriptions, a generated page or documentation
+  // from an MCP server need more.
+  const webLlm = { contextWindowSize: 16384, worker: webLlmWorker };
   return {
     nano: new PromptApiEngine(),
-    qwenWebLlm: new WebLlmEngine('Qwen3-0.6B-q4f16_1-MLC', {
-      worker: webLlmWorker,
-    }),
+    qwenWebLlm: new WebLlmEngine('Qwen3-0.6B-q4f16_1-MLC', webLlm),
     qwenTransformers: new TransformersJsEngine(
       'onnx-community/Qwen3-0.6B-ONNX',
       {
         storage: 'opfs',
       },
     ),
-    gemmaWebLlm: new WebLlmEngine('gemma-4-E2B-it-q4f16_1-MLC', {
-      worker: webLlmWorker,
-    }),
+    gemmaWebLlm: new WebLlmEngine('gemma-4-E2B-it-q4f16_1-MLC', webLlm),
     gemmaTransformers: new TransformersJsEngine(
       'onnx-community/gemma-4-E4B-it-ONNX',
       {

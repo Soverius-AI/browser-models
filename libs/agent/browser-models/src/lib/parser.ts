@@ -14,10 +14,12 @@ export type OutputPart =
 
 /**
  * Formats small models use. Tool calls: a ```tool_call fence or Qwen/Hermes <tool_call>
- * tags. Thinking: Qwen3/DeepSeek <think> tags.
+ * tags. Thinking: Qwen3/DeepSeek <think> tags. A ```tool_result fence is dropped.
  */
 const BLOCKS = [
   { kind: 'tool-call', open: '```tool_call', close: '```' },
+  // Tool results are written by the agent. A model that writes one is echoing: never shown.
+  { kind: 'tool-result', open: '```tool_result', close: '```' },
   { kind: 'tool-call', open: '<tool_call>', close: '</tool_call>' },
   { kind: 'reasoning', open: '<think>', close: '</think>' },
 ] as const;
@@ -54,6 +56,14 @@ export class OutputParser {
             kind: 'tool-call',
             raw: this.#buffer.slice(0, end).trim(),
           });
+        } else if (block.kind === 'tool-result') {
+          if (end === -1) {
+            // Drop what arrived, keeping only a possible start of the closing fence.
+            this.#buffer = this.#buffer.slice(
+              this.#buffer.length - partialEnd(this.#buffer, [block.close]),
+            );
+            return parts;
+          }
         } else {
           // Stream thinking right away, holding back only a possible start of </think>.
           const upTo =
@@ -100,6 +110,8 @@ export class OutputParser {
     } else if (this.#inside?.kind === 'reasoning') {
       add(parts, 'reasoning', this.#buffer);
       parts.push({ kind: 'reasoning-end' });
+    } else if (this.#inside?.kind === 'tool-result') {
+      // An echoed tool result that was never closed: dropped like a closed one.
     } else {
       add(parts, 'text', this.#buffer);
     }

@@ -87,6 +87,8 @@ function toolInstructions(tools: readonly ToolSpec[]): string {
     'You can call tools. To call one, reply with a block like this and nothing after it:',
     '```tool_call\n{"name": "<tool name>", "arguments": { ... }}\n```',
     'Tool results come back in a ```tool_result block. Only call a tool when you need it.',
+    'After a tool result, answer the user in plain words. Never write a tool_result block yourself.',
+    'If a tool result is an error, do not give up: fix the arguments or call the tool that provides what is missing, then try again.',
     'Available tools:',
     list,
   ].join('\n');

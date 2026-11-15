@@ -399,6 +399,38 @@ h3 {
   border: 0;
 }
 
+.playground-devtools {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* The event list takes its height from the example, so both stay in view. */
+.playground__window--devtools .playground__frame {
+  height: calc(75vh - 11rem);
+  min-height: 23rem;
+}
+
+/* The agent's AG-UI events, newest first. */
+.playground__events {
+  height: 11rem;
+  margin: 0;
+  padding: 0.5rem 0.9rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--card-border);
+  font-size: 0.75rem;
+  list-style: none;
+}
+
+.playground__events li {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* As tall as the example window; the list scrolls inside, so the chat stays in view. */
 .playground__help {
   max-height: calc(max(75vh, 34rem) + 2.5rem);

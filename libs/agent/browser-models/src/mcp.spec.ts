@@ -198,4 +198,16 @@ describe('McpTools (against the official MCP server SDK)', () => {
     // tools/list and tools/call follow the run; the shared handshake only has the timeout.
     expect(server.signals.filter((sent) => sent.aborted)).toHaveLength(2);
   });
+
+  it('cuts off a result that is too long for a small context window', async () => {
+    const [add] = await new McpTools({
+      url: 'http://localhost/mcp',
+      fetch: (await referenceServer()).fetch,
+      maxResultLength: 0,
+    }).tools(signal);
+
+    expect(await add?.execute({ a: 2, b: 3 }, signal)).toMatchObject({
+      content: '\n… (cut off after 0 of 1 characters)',
+    });
+  });
 });

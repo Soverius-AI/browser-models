@@ -5,6 +5,7 @@ const model = new FakeModel();
 const loaded: { modelId: string; device: string; dtype: string }[] = [];
 const cleared: string[] = [];
 const prompts: unknown[] = [];
+const runs: Record<string, unknown>[] = [];
 
 vi.mock('@huggingface/transformers', () => {
   class TextStreamer {
@@ -32,7 +33,9 @@ vi.mock('@huggingface/transformers', () => {
       }),
     );
   }
-  async function generate({ streamer }: { streamer: TextStreamer }) {
+  async function generate(settings: { streamer: TextStreamer }) {
+    const { streamer, ...rest } = settings;
+    runs.push(rest);
     for await (const text of model.reply())
       streamer.options.callback_function(text);
   }
@@ -116,6 +119,7 @@ describe('TransformersJsEngine', () => {
     loaded.length = 0;
     cleared.length = 0;
     prompts.length = 0;
+    runs.length = 0;
   });
 
   it('is unavailable on WebGPU without a GPU, but works on WASM', async () => {
@@ -147,6 +151,26 @@ describe('TransformersJsEngine', () => {
 
     expect(await collect(engine.generate({ messages }))).toBe('Hello');
     expect(prompts).toEqual([messages]);
+  });
+
+  it('runs without sampling and with 1024 new tokens by default', async () => {
+    await collect(new TransformersJsEngine('any/model').generate({ messages }));
+
+    expect(runs[0]).toMatchObject({ max_new_tokens: 1024, do_sample: false });
+  });
+
+  it('passes generation settings to transformers.js', async () => {
+    const engine = new TransformersJsEngine('any/model', {
+      maxNewTokens: 256,
+      generation: { do_sample: true, temperature: 0.7 },
+    });
+    await collect(engine.generate({ messages }));
+
+    expect(runs[0]).toMatchObject({
+      max_new_tokens: 256,
+      do_sample: true,
+      temperature: 0.7,
+    });
   });
 
   it('deletes with the cache helpers that fit the task', async () => {

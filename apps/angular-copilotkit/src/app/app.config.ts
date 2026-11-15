@@ -16,8 +16,10 @@ import { BrowserModelsAgent } from '@soverius-ai/browser-models/agent';
 import { ModelActivityView } from './model-activity';
 import {
   Context7Tools,
+  sandboxDesignSkill,
   createExampleModels,
   currentTime,
+  devtoolsFromUrl,
   modelActivitySchema,
   modelFromUrl,
 } from '@soverius-ai/example-shared';
@@ -46,12 +48,12 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideBrowserModels(
       withAgent(agent),
-      ...(isDevMode() ? [withDevtools()] : []),
+      ...(isDevMode() || devtoolsFromUrl() ? [withDevtools()] : []),
     ),
     provideCopilotKit({
       agents: { default: agent },
       // Registers the `generateSandboxedUi` tool and the sandbox renderer (JetBrains websandbox).
-      openGenerativeUI: {},
+      openGenerativeUI: { designSkill: sandboxDesignSkill },
       renderActivityMessages: [
         {
           activityType: MODEL_ACTIVITY,

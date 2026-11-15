@@ -68,7 +68,10 @@ const examples: readonly Example[] = [
   {
     title: 'MCP server',
     text: 'Tools of the remote Context7 server, through McpTools. This sends requests to mcp.context7.com.',
-    prompts: on(all, 'docs for react'),
+    prompts: on(
+      all,
+      'Find the library id for react with Context7, then look up its docs: how does useState work?',
+    ),
     query: 'mcp=context7',
   },
   {
@@ -87,6 +90,20 @@ const examples: readonly Example[] = [
     },
   },
 ];
+
+/** One AG-UI event of the example's agent, as the "Devtools" switch shows it. */
+interface AgentEvent {
+  readonly id: number;
+  readonly type: string;
+  readonly detail: string;
+}
+
+/** The part of an AG-UI event worth a line: its text, tool name or error. */
+function detail(event: Record<string, unknown>): string {
+  const value =
+    event.delta ?? event.toolCallName ?? event.message ?? event.name ?? '';
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
 
 function isPlatform(value: string | null): value is Platform {
   return value !== null && Object.hasOwn(platforms, value);
@@ -133,12 +150,35 @@ export default function Playground() {
     isPlatform(requested) ? requested : 'angular',
   );
   const [query, setQuery] = useState('');
+  const [devtools, setDevtools] = useState(false);
+  const [events, setEvents] = useState<readonly AgentEvent[]>([]);
   const frame = useRef<HTMLIFrameElement>(null);
   /** A prompt to send once the example has reloaded with another query. */
   const pending = useRef<string | undefined>(undefined);
 
   const current = platforms[platform];
-  const src = `/examples/${platform}/?model=demo${query && `&${query}`}`;
+  const src = `/examples/${platform}/?model=demo${query && `&${query}`}${devtools ? '&devtools' : ''}`;
+
+  /** With `?devtools` the example posts every agent event to its own window: list them. */
+  function listen(): void {
+    setEvents([]);
+    if (!devtools) return;
+    let id = 0;
+    frame.current?.contentWindow?.addEventListener(
+      'message',
+      ({ data }: MessageEvent) => {
+        if (data?.source !== 'soverius-ai/devtools') return;
+        const event = data.event as Record<string, unknown>;
+        const next = {
+          id: id++,
+          type: String(event.type),
+          detail: detail(event),
+        };
+        // Newest first; a long run would otherwise grow without end.
+        setEvents((list) => [next, ...list].slice(0, 200));
+      },
+    );
+  }
 
   function run(example: Example, prompt: string): void {
     if (example.query && example.query !== query) {
@@ -170,10 +210,20 @@ export default function Playground() {
               {platforms[id].name}
             </button>
           ))}
+          <label className="playground-devtools">
+            <input
+              type="checkbox"
+              checked={devtools}
+              onChange={(event) => setDevtools(event.target.checked)}
+            />
+            Devtools
+          </label>
         </div>
 
         <div className="playground">
-          <div className="playground__window">
+          <div
+            className={`playground__window${devtools ? ' playground__window--devtools' : ''}`}
+          >
             <div className="playground__bar">
               <i />
               <i />
@@ -181,17 +231,28 @@ export default function Playground() {
               <span>{current.name} example · runs on your device</span>
             </div>
             <iframe
-              key={platform + query}
+              key={platform + query + String(devtools)}
               ref={frame}
               title={`${current.name} example`}
               src={src}
               className="playground__frame"
               onLoad={() => {
+                listen();
                 if (!pending.current) return;
                 void send(frame.current, pending.current);
                 pending.current = undefined;
               }}
             />
+            {devtools && (
+              <ol className="playground__events" aria-label="Agent events">
+                {events.length === 0 && <li>Run an example to see events.</li>}
+                {events.map((event) => (
+                  <li key={event.id}>
+                    <code>{event.type}</code> {event.detail}
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
           <aside className="playground__help">
             <h3>Examples</h3>

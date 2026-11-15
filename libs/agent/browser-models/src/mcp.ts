@@ -58,6 +58,11 @@ export interface McpToolsOptions {
   readonly fetch?: typeof fetch;
   /** Milliseconds before a request to the server is given up. Default 30 000. */
   readonly timeout?: number;
+  /**
+   * Longest text a tool result may give the model, in characters. Longer results are cut off.
+   * Models in the browser have small context windows. Default 3000.
+   */
+  readonly maxResultLength?: number;
 }
 
 /** The MCP protocol version this client asks for. The server may answer with another one. */
@@ -142,10 +147,15 @@ class McpClient {
     const result = callToolResult.parse(
       await this.#call('tools/call', { name, arguments: args }, signal),
     );
-    const text = result.content
+    const all = result.content
       .filter((part) => part.type === 'text')
       .map((part) => part.text ?? '')
       .join('\n');
+    const limit = this.#options.maxResultLength ?? 3000;
+    const text =
+      all.length > limit
+        ? `${all.slice(0, limit)}\n… (cut off after ${limit} of ${all.length} characters)`
+        : all;
     // Tool output comes from another server: mark it as data for the model.
     return result.isError
       ? { error: text || 'The tool failed.' }

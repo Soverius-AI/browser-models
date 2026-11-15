@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { CopilotChat } from '@copilotkit/vue/v2';
 import { useDevtools, useModelStore } from '@soverius-ai/browser-models-vue';
-import { modelLabel, statusBadge } from '@soverius-ai/example-shared';
+import {
+  devtoolsFromUrl,
+  modelLabel,
+  statusBadge,
+} from '@soverius-ai/example-shared';
 import { agent, context7, models } from './agent';
 import TodoManager from './copilotkit-docs/TodoManager.vue';
 import WeatherTool from './copilotkit-docs/WeatherTool.vue';
@@ -10,7 +14,7 @@ import TripPlan from './TripPlan.vue';
 
 const state = useModelStore(models);
 const baseUrl = import.meta.env.BASE_URL;
-useDevtools(agent, import.meta.env.DEV);
+useDevtools(agent, import.meta.env.DEV || devtoolsFromUrl());
 
 function onModelChange(event: Event): void {
   void models.selectModel((event.target as HTMLSelectElement).value);

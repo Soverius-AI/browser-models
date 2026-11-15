@@ -1,5 +1,6 @@
 import type { AgentSubscriber } from '@ag-ui/client';
 import {
+  devtoolsFromUrl,
   modelActivityView,
   modelLabel,
   registerPageTools,
@@ -23,7 +24,7 @@ const context7Toggle = $<HTMLInputElement>('context7');
 const context7Key = $<HTMLInputElement>('context7-key');
 
 void registerPageTools();
-if (import.meta.env.DEV) agent.connectDevtools();
+if (import.meta.env.DEV || devtoolsFromUrl()) agent.connectDevtools();
 
 // Model picker and download, from the model store.
 for (const id of models.modelIds) picker.add(new Option(modelLabel(id), id));

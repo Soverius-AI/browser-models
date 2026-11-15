@@ -1,4 +1,5 @@
 import { jsonrepair } from 'jsonrepair';
+import { closeJson } from './partial-json.ts';
 import { z } from 'zod';
 import type { JsonSchema } from './engine.ts';
 import { ArgumentsSchema } from './schema.ts';
@@ -84,25 +85,30 @@ export class ToolCallRepair {
   readPartial(
     raw: string,
   ): { readonly name: string; readonly argumentsJson: string } | undefined {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(jsonrepair(raw));
-    } catch {
-      return undefined;
-    }
+    // Well-formed JSON is closed exactly. JSON that needs repair (single quotes, bare keys) is
+    // read with jsonrepair, which has to guess: the arguments are then only a likely preview.
+    const closed = closeJson(raw);
+    const exact = parse(closed.json);
+    const parsed = exact ?? parse(() => jsonrepair(raw));
     const call = callEnvelope.safeParse(parsed).data;
-    // The name is complete once another key follows it.
-    const keys = Object.keys(jsonObject.safeParse(parsed).data ?? {});
-    if (!call || keys.at(-1) === 'name') return undefined;
+    if (!call) return undefined;
+    // The model is still writing the name itself.
+    const lastKey = Object.keys(jsonObject.safeParse(parsed).data ?? {}).at(-1);
+    if (lastKey === 'name' && (exact === undefined || closed.inString))
+      return undefined;
     const tool = findTool(call.name, this.#tools);
     if (!tool) return undefined;
 
     const args = jsonObject.safeParse(call.arguments ?? call.parameters);
+    if (!args.success) return { name: tool.name, argumentsJson: '' };
+    const json = JSON.stringify(args.data);
+    if (exact === undefined)
+      return { name: tool.name, argumentsJson: certainStart(json, raw) };
+    // What is still open gets closed later: leave the closing characters out.
+    const start = json.replace(/[\]}]+$/, '');
     return {
       name: tool.name,
-      argumentsJson: args.success
-        ? certainStart(JSON.stringify(args.data), raw)
-        : '',
+      argumentsJson: closed.inString ? start.slice(0, -1) : start,
     };
   }
 
@@ -182,6 +188,15 @@ function certainStart(json: string, raw: string): string {
       open.lastIndexOf('[') + 1,
     ),
   );
+}
+
+/** The parsed JSON, or undefined when it is not valid JSON. */
+function parse(json: string | (() => string)): unknown {
+  try {
+    return JSON.parse(typeof json === 'string' ? json : json());
+  } catch {
+    return undefined;
+  }
 }
 
 function checkArguments(args: unknown, tool: ToolSpec) {

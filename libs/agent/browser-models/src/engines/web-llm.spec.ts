@@ -3,6 +3,7 @@ import { WebLlmEngine } from './web-llm.ts';
 
 const model = new FakeModel();
 const requests: { response_format?: unknown }[] = [];
+const reloads: unknown[][] = [];
 const terminated = vi.fn();
 
 vi.mock('@mlc-ai/web-llm', () => {
@@ -20,7 +21,8 @@ vi.mock('@mlc-ai/web-llm', () => {
       this.#progress = config.initProgressCallback;
     }
 
-    async reload(): Promise<void> {
+    async reload(...args: unknown[]): Promise<void> {
+      reloads.push(args);
       this.#unloaded = false;
       await model.load((progress) => this.#progress({ progress }));
       // Like WebLLM: a reload stopped by unload() returns quietly, without a model.
@@ -71,6 +73,7 @@ describe('WebLlmEngine', () => {
     model.reset();
     model.downloaded = true;
     requests.length = 0;
+    reloads.length = 0;
     terminated.mockClear();
   });
 
@@ -92,6 +95,23 @@ describe('WebLlmEngine', () => {
       type: 'json_object',
       schema: '{"type":"object"}',
     });
+  });
+
+  it("loads with the model's own settings by default", async () => {
+    await new WebLlmEngine('Any-MLC').load();
+
+    expect(reloads).toEqual([['Any-MLC', undefined]]);
+  });
+
+  it('passes the context size and the chat options to WebLLM', async () => {
+    await new WebLlmEngine('Any-MLC', {
+      contextWindowSize: 16384,
+      chatOptions: { temperature: 0.2, context_window_size: 2048 },
+    }).load();
+
+    expect(reloads).toEqual([
+      ['Any-MLC', { temperature: 0.2, context_window_size: 16384 }],
+    ]);
   });
 
   it('creates one worker per load and terminates it on unload', async () => {

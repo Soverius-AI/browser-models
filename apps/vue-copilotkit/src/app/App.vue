@@ -4,7 +4,10 @@ import { agent } from './agent';
 import ChatPage from './ChatPage.vue';
 import ModelActivity from './ModelActivity.vue';
 import { MODEL_ACTIVITY } from '@soverius-ai/browser-models';
-import { modelActivitySchema } from '@soverius-ai/example-shared';
+import {
+  modelActivitySchema,
+  sandboxDesignSkill,
+} from '@soverius-ai/example-shared';
 import type { VueActivityMessageRenderer } from '@copilotkit/vue/v2';
 import type { Component } from 'vue';
 
@@ -13,7 +16,7 @@ import type { Component } from 'vue';
 const agents = { default: agent };
 // `openGenerativeUI` registers the `generateSandboxedUi` tool and the sandbox renderer (JetBrains
 // websandbox). Passed with v-bind, because Vue reads `open-generative-ui` as `openGenerativeUi`.
-const sandbox = { openGenerativeUI: {} };
+const sandbox = { openGenerativeUI: { designSkill: sandboxDesignSkill } };
 const activityRenderers = [
   {
     activityType: MODEL_ACTIVITY,

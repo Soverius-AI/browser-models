@@ -9,6 +9,7 @@ import { AsyncQueue } from '../lib/async-queue.ts';
 import { opfsCache, type FileCache } from './opfs-cache.ts';
 import { SharedLoad } from './shared-load.ts';
 import type {
+  GenerationConfig,
   InterruptableStoppingCriteria,
   PreTrainedTokenizer,
   ProgressInfo,
@@ -29,6 +30,12 @@ export interface TransformersJsOptions {
   readonly dtype?: 'q4f16' | 'q4' | 'q8' | 'fp16' | 'fp32';
   /** Longest reply in tokens. Default 1024. */
   readonly maxNewTokens?: number;
+  /**
+   * Any other transformers.js generation setting, passed to every run as it is: `do_sample`,
+   * `temperature`, `top_p`, `repetition_penalty` and so on. Default `{ do_sample: false }`.
+   * There is no context size to set: the context is the model's own, limited only by memory.
+   */
+  readonly generation?: Partial<GenerationConfig>;
   /**
    * Where model files are stored. `cache-api` (default) is transformers.js' own choice;
    * `opfs` stores them in the Origin Private File System. transformers.js keeps this setting
@@ -66,7 +73,7 @@ export class TransformersJsEngine implements Engine {
   readonly #task: 'text-generation' | 'image-text-to-text';
   readonly #device: 'webgpu' | 'wasm';
   readonly #dtype: Dtype;
-  readonly #maxNewTokens: number;
+  readonly #generation: Partial<GenerationConfig>;
   /** Only opens the OPFS folder when a file is read or written. */
   readonly #cache: FileCache | undefined;
   readonly #model: SharedLoad<Runner>;
@@ -81,7 +88,11 @@ export class TransformersJsEngine implements Engine {
     this.#task = options.task ?? 'text-generation';
     this.#device = options.device ?? 'webgpu';
     this.#dtype = options.dtype ?? (this.#device === 'webgpu' ? 'q4f16' : 'q4');
-    this.#maxNewTokens = options.maxNewTokens ?? 1024;
+    this.#generation = {
+      max_new_tokens: options.maxNewTokens ?? 1024,
+      do_sample: false,
+      ...options.generation,
+    };
     this.#cache = options.storage === 'opfs' ? opfsCache() : undefined;
     this.#model = new SharedLoad(
       (onProgress, signal) => {
@@ -222,8 +233,7 @@ export class TransformersJsEngine implements Engine {
       tokenizer: pipe.tokenizer,
       run: (messages, { streamer, stopping }) =>
         pipe([...messages], {
-          max_new_tokens: this.#maxNewTokens,
-          do_sample: false,
+          ...this.#generation,
           streamer,
           stopping_criteria: stopping,
         }),
@@ -267,8 +277,7 @@ export class TransformersJsEngine implements Engine {
         });
         return model.generate({
           ...inputs,
-          max_new_tokens: this.#maxNewTokens,
-          do_sample: false,
+          ...this.#generation,
           streamer,
           stopping_criteria: stopping,
         });

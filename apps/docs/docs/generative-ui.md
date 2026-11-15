@@ -125,6 +125,9 @@ sequenceDiagram
   C->>A: tool result "UI generated", follow-up run
 ```
 
-The model writes a whole page as tool arguments, so use the largest model you offer.
+The model writes a whole page as tool arguments, so use the largest model you offer and give it room:
+
+- WebLLM defaults to 4096 tokens. Set `contextWindowSize: 16384` ([Context size](./engines.md#context-size)).
+- Small models follow a short `designSkill` with one exact pattern better than CopilotKit's long default. See `sandboxDesignSkill` in `libs/examples/shared/src/lib/sandbox-demos.ts`.
 
 Try it: [Playground](/playground?platform=angular), "Draw a chart with Chart.js" or "Build a tip calculator". Examples: `apps/angular-copilotkit`, `apps/react-copilotkit`, `apps/vue-copilotkit`.

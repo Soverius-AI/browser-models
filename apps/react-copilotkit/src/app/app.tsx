@@ -1,6 +1,11 @@
 import { CopilotChat, CopilotKitProvider } from '@copilotkit/react-core/v2';
 import { useDevtools, useModelStore } from '@soverius-ai/browser-models-react';
-import { modelLabel, statusBadge } from '@soverius-ai/example-shared';
+import {
+  devtoolsFromUrl,
+  modelLabel,
+  sandboxDesignSkill,
+  statusBadge,
+} from '@soverius-ai/example-shared';
 import { agent, context7, models } from './agent';
 import { TodoManager } from './copilotkit-docs/todo-manager';
 import { WeatherWidget } from './copilotkit-docs/weather-widget';
@@ -10,7 +15,7 @@ import { TripPlan } from './trip-plan';
 
 export function App() {
   const state = useModelStore(models);
-  useDevtools(agent, import.meta.env.DEV);
+  useDevtools(agent, import.meta.env.DEV || devtoolsFromUrl());
 
   return (
     // `agents__unsafe_dev_only` is CopilotKit React's prop for agents that run in the page.
@@ -18,7 +23,7 @@ export function App() {
     <CopilotKitProvider
       agents__unsafe_dev_only={{ default: agent }}
       // Registers the `generateSandboxedUi` tool and the sandbox renderer (JetBrains websandbox).
-      openGenerativeUI={{}}
+      openGenerativeUI={{ designSkill: sandboxDesignSkill }}
       renderActivityMessages={[modelActivityRenderer]}
     >
       <main className="flex h-full flex-col">

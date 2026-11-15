@@ -97,8 +97,8 @@ interface ToolResult {
   readonly result: string;
 }
 
-/** "docs for react" or "context7 react": the library name is the word after the keyword. */
-const CONTEXT7 = /(?:docs for|context7)\s+([\w@./-]+)/i;
+/** "docs for react", "library id for react" or "context7 react": the library name follows the keyword. */
+const CONTEXT7 = /(?:docs for|id for|context7)\s+([\w@./-]+)/i;
 /** How Context7's resolve-library-id names a match, for example `/reactjs/react.dev`. */
 const LIBRARY_ID = /library ID: (\/[\w.-]+\/[\w.-]+)/i;
 
