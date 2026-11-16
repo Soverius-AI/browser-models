@@ -2,14 +2,23 @@ import type { Context, Message } from '@ag-ui/core';
 import type { ChatMessage } from './engine.ts';
 import type { ToolSpec } from './tools.ts';
 
+/** A message of the prompt, and the AG-UI message it was made from. */
+export interface PromptMessage extends ChatMessage {
+  /**
+   * The client's message this one was made from. Not set for the system prompt, and for the
+   * tool calls and results a run adds.
+   */
+  readonly source?: Message;
+}
+
 /** Turns the AG-UI conversation into plain chat messages, with tool instructions in the system prompt. */
 export function buildChatMessages(
   messages: readonly Message[],
   context: readonly Context[],
   tools: readonly ToolSpec[],
-): ChatMessage[] {
+): PromptMessage[] {
   const system: string[] = [];
-  const chat: ChatMessage[] = [];
+  const chat: PromptMessage[] = [];
   const toolNames = new Map<string, string>();
 
   for (const message of messages) {
@@ -19,7 +28,11 @@ export function buildChatMessages(
         system.push(message.content);
         break;
       case 'user':
-        chat.push({ role: 'user', content: textOf(message.content) });
+        chat.push({
+          role: 'user',
+          content: textOf(message.content),
+          source: message,
+        });
         break;
       case 'assistant': {
         const calls = (message.toolCalls ?? []).map((call) => {
@@ -29,7 +42,7 @@ export function buildChatMessages(
         const content = [message.content ?? '', ...calls]
           .filter(Boolean)
           .join('\n');
-        if (content) chat.push({ role: 'assistant', content });
+        if (content) chat.push({ role: 'assistant', content, source: message });
         break;
       }
       case 'tool':
@@ -39,6 +52,7 @@ export function buildChatMessages(
             toolNames.get(message.toolCallId) ?? 'unknown',
             message.error ?? (textOf(message.content) || EMPTY_RESULT),
           ),
+          source: message,
         });
         break;
       default:
@@ -76,6 +90,29 @@ export function toolResultBlock(name: string, result: string): string {
   return '```tool_result\n' + JSON.stringify({ name, result }) + '\n```';
 }
 
+const TOOL_RESULT = /```tool_result\n(.*)\n```/g;
+const SHORTENED = '\n… (shortened)';
+
+/**
+ * Cuts the results in the `tool_result` blocks of a message to `length` characters, to save
+ * context. Everything else stays as it is.
+ */
+export function shortenToolResults(content: string, length: number): string {
+  return content.replace(TOOL_RESULT, (block: string, json: string) => {
+    let name: unknown;
+    let result: unknown;
+    try {
+      ({ name, result } = JSON.parse(json) as Record<string, unknown>);
+    } catch {
+      return block; // not a block of ours, for example one the user typed
+    }
+    if (typeof name !== 'string' || typeof result !== 'string') return block;
+    // Also true for a result that was cut before: it is not cut twice.
+    if (result.length <= length + SHORTENED.length) return block;
+    return toolResultBlock(name, result.slice(0, length) + SHORTENED);
+  });
+}
+
 function toolInstructions(tools: readonly ToolSpec[]): string {
   const list = tools
     .map(
@@ -94,7 +131,8 @@ function toolInstructions(tools: readonly ToolSpec[]): string {
   ].join('\n');
 }
 
-function textOf(
+/** The text of a message whose content may come in parts. */
+export function textOf(
   content: string | readonly { type: string; text?: string }[],
 ): string {
   if (typeof content === 'string') return content;

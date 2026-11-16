@@ -7,8 +7,14 @@ import {
   type Tool,
 } from '@ag-ui/core';
 import { from } from 'rxjs';
+import type {
+  Compaction,
+  CompactionRequest,
+  CompactionStatus,
+} from './compaction.ts';
 import type { Engine, GenerateRequest } from './engine.ts';
 import { AgentRun, type RunOptions } from './run.ts';
+import { SummaryCompaction } from './summary-compaction.ts';
 import type { LocalTool } from './tools.ts';
 
 function run(options: RunOptions): AsyncGenerator<AgUiEvent> {
@@ -816,5 +822,119 @@ describe('AgentRun cut-off tool call', () => {
     );
     expect(await clientToolCalls(events)).toEqual([]);
     expect(events.at(-1)?.type).toBe(EventType.RUN_FINISHED);
+  });
+});
+
+describe('AgentRun compaction', () => {
+  const call = '```tool_call\n{"name": "search", "arguments": {}}\n```';
+  const search: LocalTool = {
+    name: 'search',
+    description: 'Searches',
+    parameters: { type: 'object', properties: {} },
+    execute: async () => 'r'.repeat(1500),
+  };
+  const compactions = (events: AgUiEvent[]) =>
+    events.flatMap((event) =>
+      event.type === EventType.CUSTOM && event.name === 'soverius.compaction'
+        ? [event.value as CompactionStatus]
+        : [],
+    );
+
+  it('cuts an old tool result in a run that calls tools again and again', async () => {
+    // Two results of 500 tokens fit into 90 % of 1300 only when the first one is cut.
+    const engine = {
+      ...scriptedEngine(call, call, 'Done.'),
+      contextWindowSize: 1300,
+    };
+
+    const events = await collect(
+      run({
+        engine,
+        input: input(),
+        localTools: [search],
+        compaction: new SummaryCompaction(),
+      }),
+    );
+
+    expect(events.at(-1)?.type).toBe(EventType.RUN_FINISHED);
+    expect(compactions(events)).toEqual([
+      expect.objectContaining({ status: 'done', shortened: 1 }),
+    ]);
+    // The third model call got the first result cut and the second one whole.
+    const third = engine.requests[2]?.messages.map((m) => m.content.length);
+    expect(third?.at(-3)).toBeLessThan(400);
+    expect(third?.at(-1)).toBeGreaterThan(1500);
+  });
+
+  it('asks a compaction of your own before every model call, with the whole chat', async () => {
+    const requests: CompactionRequest[] = [];
+    /** Sends the system prompt and the newest message only. */
+    class NewestOnly implements Compaction {
+      async compact(request: CompactionRequest) {
+        requests.push({ ...request, messages: [...request.messages] });
+        request.report({
+          status: 'done',
+          tokensBefore: request.messages.length,
+          tokensAfter: 2,
+          contextWindowSize: 0,
+          summarized: 0,
+          shortened: 0,
+          dropped: request.messages.length - 2,
+        });
+        return [...request.messages.slice(0, 1), ...request.messages.slice(-1)];
+      }
+    }
+    const engine = scriptedEngine(call, 'Done.');
+
+    const events = await collect(
+      run({
+        engine,
+        input: input(),
+        localTools: [search],
+        compaction: new NewestOnly(),
+      }),
+    );
+
+    expect(events.at(-1)?.type).toBe(EventType.RUN_FINISHED);
+    expect(requests.map((request) => request.threadId)).toEqual([
+      'thread',
+      'thread',
+    ]);
+    // The second call gets what the first one left out again, and what the run added.
+    expect(requests.map((request) => request.messages.length)).toEqual([2, 4]);
+    expect(requests[1]?.messages.map((message) => message.source?.id)).toEqual([
+      undefined,
+      '1',
+      undefined,
+      undefined,
+    ]);
+    // The engine gets what the compaction returned, as plain chat messages.
+    expect(engine.requests[1]?.messages).toEqual([
+      { role: 'system', content: expect.stringContaining('search') },
+      { role: 'user', content: expect.stringContaining('tool_result') },
+    ]);
+    expect(compactions(events).map((status) => status.status)).toEqual([
+      'done',
+      'done',
+    ]);
+  });
+
+  it('fails the run when the compaction fails', async () => {
+    const events = await collect(
+      run({
+        engine: scriptedEngine('Hello'),
+        input: input(),
+        compaction: {
+          compact: async () => {
+            throw new Error('No room.');
+          },
+        },
+      }),
+    );
+
+    expect(events.at(-1)).toMatchObject({
+      type: EventType.RUN_ERROR,
+      message: 'No room.',
+    });
   });
 });

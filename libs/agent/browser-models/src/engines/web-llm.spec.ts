@@ -55,6 +55,11 @@ vi.mock('@mlc-ai/web-llm', () => {
   return {
     MLCEngine,
     WebWorkerMLCEngine: MLCEngine,
+    prebuiltAppConfig: {
+      model_list: [
+        { model_id: 'Small-MLC', overrides: { context_window_size: 4096 } },
+      ],
+    },
     hasModelInCache: async () => model.downloaded,
     deleteModelAllInfoInCache: async () => model.delete(),
   };
@@ -112,6 +117,27 @@ describe('WebLlmEngine', () => {
     expect(reloads).toEqual([
       ['Any-MLC', { temperature: 0.2, context_window_size: 16384 }],
     ]);
+  });
+
+  it('reports the context size the model was built with, once it is loaded', async () => {
+    const engine = new WebLlmEngine('Small-MLC');
+    expect(engine.contextWindowSize).toBeUndefined();
+
+    await engine.load();
+
+    expect(engine.contextWindowSize).toBe(4096);
+  });
+
+  it('reports the context size it was given', () => {
+    expect(
+      new WebLlmEngine('Small-MLC', { contextWindowSize: 16384 })
+        .contextWindowSize,
+    ).toBe(16384);
+    expect(
+      new WebLlmEngine('Small-MLC', {
+        chatOptions: { context_window_size: 8192 },
+      }).contextWindowSize,
+    ).toBe(8192);
   });
 
   it('creates one worker per load and terminates it on unload', async () => {

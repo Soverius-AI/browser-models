@@ -26,7 +26,8 @@ export interface WebLlmOptions {
    * How many tokens fit into the model's context: system prompt, tool descriptions, the whole
    * conversation, tool results and the reply. Default: what the model was built with, 4096 for
    * nearly every prebuilt WebLLM model (1024 for the smallest). A run that needs more fails with
-   * WebLLM's `ContextWindowSizeExceededError`. A larger window needs more GPU memory.
+   * WebLLM's `ContextWindowSizeExceededError`. A larger window needs more GPU memory. The agent
+   * compacts long conversations to fit (see `compaction` of `BrowserModelsAgent`).
    */
   readonly contextWindowSize?: number;
   /**
@@ -55,6 +56,8 @@ export class WebLlmEngine implements Engine {
   readonly #options: WebLlmOptions;
   readonly #model: SharedLoad<Loaded>;
   #library: Promise<WebLlmLibrary> | undefined;
+  /** The context size the model was built with, known once WebLLM is imported. */
+  #builtContextWindowSize: number | undefined;
 
   constructor(modelId: string, options: WebLlmOptions = {}) {
     this.id = `web-llm:${modelId}`;
@@ -63,6 +66,15 @@ export class WebLlmEngine implements Engine {
     this.#model = new SharedLoad(
       (onProgress, signal) => this.#start(onProgress, signal),
       free,
+    );
+  }
+
+  /** The `contextWindowSize` option, or what the model was built with (known after `load()`). */
+  get contextWindowSize(): number | undefined {
+    return (
+      this.#options.contextWindowSize ??
+      this.#options.chatOptions?.context_window_size ??
+      this.#builtContextWindowSize
     );
   }
 
@@ -135,6 +147,10 @@ export class WebLlmEngine implements Engine {
   ): Promise<Loaded> {
     const webLlm = await this.#webLlm();
     signal.throwIfAborted();
+    this.#builtContextWindowSize = (
+      this.#options.appConfig ?? webLlm.prebuiltAppConfig
+    ).model_list.find((model) => model.model_id === this.#modelId)?.overrides
+      ?.context_window_size;
     const config = {
       ...(this.#options.appConfig
         ? { appConfig: this.#options.appConfig }

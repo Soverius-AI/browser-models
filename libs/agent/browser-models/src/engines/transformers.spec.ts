@@ -173,6 +173,16 @@ describe('TransformersJsEngine', () => {
     });
   });
 
+  it('has no context size unless it is given one', () => {
+    expect(
+      new TransformersJsEngine('any/model').contextWindowSize,
+    ).toBeUndefined();
+    expect(
+      new TransformersJsEngine('any/model', { contextWindowSize: 8192 })
+        .contextWindowSize,
+    ).toBe(8192);
+  });
+
   it('deletes with the cache helpers that fit the task', async () => {
     await new TransformersJsEngine('a/model').delete();
     await new TransformersJsEngine('a/gemma', {

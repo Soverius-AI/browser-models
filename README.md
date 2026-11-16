@@ -15,6 +15,7 @@ Run language models in the browser (Chrome/Edge Prompt API, WebLLM, transformers
 | Tool calls         | arguments stream while the model writes; broken calls are repaired before they run           |
 | Generative UI      | components you write, or pages the model writes (CopilotKit's Open Generative UI, sandboxed) |
 | Tools              | local tools, frontend tools (e.g. CopilotKit), the page's WebMCP tools, MCP servers          |
+| Long conversations | compacted to fit the model's context: older turns become a summary, old tool results are cut |
 | Models on a device | explicit model selection, download with progress, list and delete downloaded models          |
 
 ## Install

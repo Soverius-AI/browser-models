@@ -33,6 +33,13 @@ export interface Engine {
   readonly id: string;
   /** True when `generate` can force JSON output with `constraint`. */
   readonly supportsConstraint: boolean;
+  /**
+   * How many tokens the model's context holds, prompt and reply together. The agent's
+   * compaction reads it after `load()` and cuts the conversation before it gets that long.
+   * Leave it out, or undefined, when the engine does not know: `SummaryCompaction` then leaves
+   * the conversation as it is.
+   */
+  readonly contextWindowSize?: number | undefined;
   availability(): Promise<Availability>;
   /** Downloads and loads the model. Browsers may require a user gesture for this. */
   load(options?: LoadOptions): Promise<void>;

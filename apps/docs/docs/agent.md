@@ -8,15 +8,16 @@ title: Agent
 import { BrowserModelsAgent } from '@soverius-ai/browser-models/agent';
 ```
 
-| Option         | Type                                    | Default                                        |
-| -------------- | --------------------------------------- | ---------------------------------------------- |
-| `models`       | `Record<string, Engine>`                | required                                       |
-| `defaultModel` | key of `models`                         | required                                       |
-| `agentId`      | `string`                                | –                                              |
-| `description`  | `string`                                | `'An agent running on a model in the browser'` |
-| `localTools`   | `(LocalTool \| LocalToolSource)[]`      | `[]`                                           |
-| `maxSteps`     | `number` (model calls per run)          | `5`                                            |
-| `repairHook`   | see [Tools → Repair](./tools.md#repair) | –                                              |
+| Option         | Type                                       | Default                                        |
+| -------------- | ------------------------------------------ | ---------------------------------------------- |
+| `models`       | `Record<string, Engine>`                   | required                                       |
+| `defaultModel` | key of `models`                            | required                                       |
+| `agentId`      | `string`                                   | –                                              |
+| `description`  | `string`                                   | `'An agent running on a model in the browser'` |
+| `localTools`   | `(LocalTool \| LocalToolSource)[]`         | `[]`                                           |
+| `maxSteps`     | `number` (model calls per run)             | `5`                                            |
+| `repairHook`   | see [Tools → Repair](./tools.md#repair)    | –                                              |
+| `compaction`   | [`Compaction`](./compaction.md) or `false` | `new SummaryCompaction()`                      |
 
 ## Model selection
 
@@ -43,6 +44,7 @@ agent.runAgent({ forwardedProps: { soverius: { model: 'nano' } } });
 | repairs          | `CUSTOM` `soverius.tool_repair` `{ toolCallId, raw, steps }`                      |
 | corrections      | `MESSAGES_SNAPSHOT` when repair changed streamed arguments                        |
 | tool sources     | `CUSTOM` `soverius.tool_source_error` `{ message }`                               |
+| compaction       | `CUSTOM` `soverius.compaction`, see [Compaction](./compaction.md#event)           |
 | model loading    | `ACTIVITY_SNAPSHOT` `soverius.model`, see [Model loading](#model-loading)         |
 | stopped          | `RUN_ERROR` with `code: 'abort'` (`agent.abortRun()`)                             |
 

@@ -6,9 +6,11 @@ import {
 import { EventType, type Event as AgUiEvent } from '@ag-ui/core';
 import { Observable } from 'rxjs';
 import { z } from 'zod';
+import type { Compaction } from './lib/compaction.ts';
 import type { Engine } from './lib/engine.ts';
 import type { RepairOptions } from './lib/repair.ts';
 import { AgentRun } from './lib/run.ts';
+import { SummaryCompaction } from './lib/summary-compaction.ts';
 import type { LocalTool, LocalToolSource } from './lib/tools.ts';
 
 export interface BrowserModelsAgentOptions<
@@ -24,6 +26,12 @@ export interface BrowserModelsAgentOptions<
   readonly localTools?: readonly (LocalTool | LocalToolSource)[];
   readonly maxSteps?: number;
   readonly repairHook?: RepairOptions['hook'];
+  /**
+   * Keeps long conversations within the model's context. Default `new SummaryCompaction()`:
+   * older turns become a summary, old tool results are cut, for engines that report a
+   * `contextWindowSize`. Pass your own `Compaction` for another algorithm, or `false` for none.
+   */
+  readonly compaction?: Compaction | false;
 }
 
 /**
@@ -43,6 +51,8 @@ export class BrowserModelsAgent<
   private options: BrowserModelsAgentOptions<Models>;
   // Shared with clones, so selectModel() also reaches the copies a client like CopilotKit makes.
   private selection: { current: keyof Models & string };
+  // Shared with clones: a compaction keeps what it made for a thread, for example a summary.
+  private compaction: Compaction | undefined;
   // The current run's controller, for abortRun(). Each clone gets its own on its first run.
   private abortController: AbortController | undefined;
 
@@ -59,6 +69,10 @@ export class BrowserModelsAgent<
     }
     this.options = options;
     this.selection = { current: options.defaultModel };
+    this.compaction =
+      options.compaction === false
+        ? undefined
+        : (options.compaction ?? new SummaryCompaction());
   }
 
   /** The model runs use unless a run picks one. Starts as `defaultModel`. */
@@ -89,6 +103,7 @@ export class BrowserModelsAgent<
     const copy = super.clone() as BrowserModelsAgent<Models>;
     copy.options = this.options;
     copy.selection = this.selection;
+    copy.compaction = this.compaction;
     return copy;
   }
 
@@ -137,6 +152,7 @@ export class BrowserModelsAgent<
             ...(this.options.repairHook
               ? { repairHook: this.options.repairHook }
               : {}),
+            ...(this.compaction ? { compaction: this.compaction } : {}),
           }).events()
         : unknownModel(input, modelId);
 

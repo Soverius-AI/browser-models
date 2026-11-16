@@ -7,6 +7,7 @@ const sidebars: SidebarsConfig = {
     'agent',
     'engines',
     'tools',
+    'compaction',
     'generative-ui',
     'models',
     {

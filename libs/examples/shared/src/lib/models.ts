@@ -11,8 +11,9 @@ import { demoEngine } from './demo-engine';
  */
 export function createExampleModels(webLlmWorker: () => Worker) {
   // WebLLM models default to 4096 tokens. Tool descriptions, a generated page or documentation
-  // from an MCP server need more.
-  const webLlm = { contextWindowSize: 16384, worker: webLlmWorker };
+  // from an MCP server need more. `?context=4096` makes it small, to see compaction at work.
+  const context = Number(new URLSearchParams(location.search).get('context'));
+  const webLlm = { contextWindowSize: context || 16384, worker: webLlmWorker };
   return {
     nano: new PromptApiEngine(),
     qwenWebLlm: new WebLlmEngine('Qwen3-0.6B-q4f16_1-MLC', webLlm),

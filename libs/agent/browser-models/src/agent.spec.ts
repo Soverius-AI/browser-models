@@ -179,3 +179,80 @@ describe('BrowserModelsAgent.connectDevtools', () => {
     expect(() => agent.connectDevtools()()).not.toThrow();
   });
 });
+
+describe('BrowserModelsAgent compaction', () => {
+  /** A conversation too long for a context of 1000 tokens. */
+  const longInput = () => ({
+    threadId: 't',
+    runId: 'r',
+    messages: [
+      ...Array.from({ length: 10 }, (_, i) => ({
+        id: `m${i}`,
+        role: i % 2 === 0 ? ('user' as const) : ('assistant' as const),
+        content: `${i} ${'x'.repeat(300)}`,
+      })),
+      { id: 'last', role: 'user' as const, content: 'And now?' },
+    ],
+    tools: [],
+    context: [],
+  });
+
+  function countingEngine(): Engine & { calls: number } {
+    return {
+      ...engineSaying('text'),
+      contextWindowSize: 1000,
+      calls: 0,
+      async *generate() {
+        this.calls++;
+        yield 'text';
+      },
+    };
+  }
+
+  const compactions = (events: BaseEvent[]) =>
+    events.filter(
+      (event) =>
+        event.type === EventType.CUSTOM &&
+        (event as { name?: string }).name === 'soverius.compaction',
+    ).length;
+
+  it('summarizes a long thread once, also across the clones a client makes', async () => {
+    const engine = countingEngine();
+    const agent = new BrowserModelsAgent({
+      models: { engine },
+      defaultModel: 'engine',
+    });
+
+    const first = await firstValueFrom(
+      agent.clone().run(longInput()).pipe(toArray()),
+    );
+    expect(compactions(first)).toBe(2); // summarizing, done
+    expect(engine.calls).toBe(2); // the summary and the answer
+
+    // The next run of the thread, with two more short messages: the summary is still there.
+    const next = longInput();
+    next.messages.push(
+      { id: 'a', role: 'assistant', content: 'text' },
+      { id: 'q', role: 'user', content: 'Thanks' },
+    );
+    const second = await firstValueFrom(
+      agent.clone().run(next).pipe(toArray()),
+    );
+    expect(compactions(second)).toBe(0);
+    expect(engine.calls).toBe(3);
+  });
+
+  it('can be switched off', async () => {
+    const engine = countingEngine();
+    const agent = new BrowserModelsAgent({
+      models: { engine },
+      defaultModel: 'engine',
+      compaction: false,
+    });
+
+    const events = await firstValueFrom(agent.run(longInput()).pipe(toArray()));
+
+    expect(compactions(events)).toBe(0);
+    expect(engine.calls).toBe(1);
+  });
+});

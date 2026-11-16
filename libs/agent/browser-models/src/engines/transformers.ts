@@ -33,9 +33,15 @@ export interface TransformersJsOptions {
   /**
    * Any other transformers.js generation setting, passed to every run as it is: `do_sample`,
    * `temperature`, `top_p`, `repetition_penalty` and so on. Default `{ do_sample: false }`.
-   * There is no context size to set: the context is the model's own, limited only by memory.
    */
   readonly generation?: Partial<GenerationConfig>;
+  /**
+   * How many tokens the agent may send before it compacts the conversation (see `compaction`
+   * of `BrowserModelsAgent`). transformers.js has no context size to set: the context is the
+   * model's own, limited only by memory. Without this option long conversations are never
+   * compacted and can run out of GPU memory.
+   */
+  readonly contextWindowSize?: number;
   /**
    * Where model files are stored. `cache-api` (default) is transformers.js' own choice;
    * `opfs` stores them in the Origin Private File System. transformers.js keeps this setting
@@ -69,6 +75,7 @@ interface Runner {
 export class TransformersJsEngine implements Engine {
   readonly id: string;
   readonly supportsConstraint = false;
+  readonly contextWindowSize: number | undefined;
   readonly #modelId: string;
   readonly #task: 'text-generation' | 'image-text-to-text';
   readonly #device: 'webgpu' | 'wasm';
@@ -84,6 +91,7 @@ export class TransformersJsEngine implements Engine {
 
   constructor(modelId: string, options: TransformersJsOptions = {}) {
     this.id = `transformers:${modelId}`;
+    this.contextWindowSize = options.contextWindowSize;
     this.#modelId = modelId;
     this.#task = options.task ?? 'text-generation';
     this.#device = options.device ?? 'webgpu';

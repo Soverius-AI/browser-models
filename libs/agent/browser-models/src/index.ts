@@ -6,8 +6,13 @@ export type {
   JsonSchema,
   LoadOptions,
 } from './lib/engine.ts';
+export type {
+  Compaction,
+  CompactionRequest,
+  CompactionStatus,
+} from './lib/compaction.ts';
 export { OutputParser, type OutputPart } from './lib/parser.ts';
-export { buildChatMessages } from './lib/prompt.ts';
+export { buildChatMessages, type PromptMessage } from './lib/prompt.ts';
 export {
   ToolCallRepair,
   type RepairOptions,
@@ -16,6 +21,10 @@ export {
 } from './lib/repair.ts';
 export { AgentRun, MODEL_ACTIVITY, type RunOptions } from './lib/run.ts';
 export { ArgumentsSchema, type SchemaCheck } from './lib/schema.ts';
+export {
+  SummaryCompaction,
+  type SummaryCompactionOptions,
+} from './lib/summary-compaction.ts';
 export type {
   LocalTool,
   LocalToolSource,
