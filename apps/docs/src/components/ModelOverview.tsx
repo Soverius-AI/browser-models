@@ -39,7 +39,7 @@ export default function ModelOverview() {
         aria-hidden="true"
         focusable="false"
       >
-        <path d="M0 40h22M22 24v112M22 24h26M22 80h26M22 136h26" />
+        <path d="M0 80h24M24 24v112M24 24h24M24 80h24M24 136h24" />
       </svg>
 
       <div className="model-overview__runtimes">
