@@ -1,0 +1,66 @@
+/* Theme values from Soverius-AI/soverius.ai: src/app/globals.css.
+   Keep the original token names and values when adapting them to Docusaurus. */
+
+:root {
+  color-scheme: light;
+  --color-primary: oklch(38% 0.16 238);
+  --color-primary-content: oklch(98% 0.005 238);
+  --color-secondary: oklch(64% 0.2 48);
+  --color-secondary-content: oklch(100% 0 0);
+  --color-accent: oklch(52% 0.17 238);
+  --color-accent-content: oklch(98% 0.005 238);
+  --color-neutral: oklch(28% 0.03 238);
+  --color-neutral-content: oklch(93% 0.005 238);
+  --color-base-100: oklch(97.5% 0.005 238);
+  --color-base-200: oklch(94% 0.008 238);
+  --color-base-300: oklch(89% 0.012 238);
+  --color-base-content: oklch(18% 0.03 238);
+  --color-info: oklch(58% 0.14 238);
+  --color-info-content: oklch(98% 0.005 238);
+  --color-success: oklch(58% 0.17 155);
+  --color-success-content: oklch(98% 0.005 155);
+  --color-warning: oklch(75% 0.16 68);
+  --color-warning-content: oklch(20% 0.03 68);
+  --color-error: oklch(55% 0.2 25);
+  --color-error-content: oklch(98% 0.005 25);
+  --radius-selector: 1rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --color-primary: oklch(68% 0.17 238);
+  --color-primary-content: oklch(10% 0.02 238);
+  --color-secondary: oklch(72% 0.18 50);
+  --color-secondary-content: oklch(10% 0.02 50);
+  --color-accent: oklch(72% 0.14 238);
+  --color-accent-content: oklch(10% 0.02 238);
+  --color-neutral: oklch(22% 0.03 238);
+  --color-neutral-content: oklch(85% 0.005 238);
+  --color-base-100: oklch(14% 0.025 238);
+  --color-base-200: oklch(18% 0.03 238);
+  --color-base-300: oklch(26% 0.035 238);
+  --color-base-content: oklch(92% 0.005 238);
+  --color-info: oklch(68% 0.15 238);
+  --color-info-content: oklch(10% 0.02 238);
+  --color-success: oklch(68% 0.18 155);
+  --color-success-content: oklch(10% 0.02 155);
+  --color-warning: oklch(78% 0.14 68);
+  --color-warning-content: oklch(15% 0.03 68);
+  --color-error: oklch(65% 0.2 25);
+  --color-error-content: oklch(10% 0.02 25);
+  --radius-selector: 1rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}

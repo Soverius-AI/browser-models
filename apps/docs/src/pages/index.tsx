@@ -1,74 +1,64 @@
 import Link from '@docusaurus/Link';
 import CodeBlock from '@theme/CodeBlock';
 import Layout from '@theme/Layout';
+import ModelOverview from '../components/ModelOverview';
+import BrowserModelsWordmark from '../components/BrowserModelsWordmark';
 
 const site = 'https://soverius.ai';
 
-/** Icon marks, shown in one colour: black, or white in dark mode. */
-const logos = [
-  { name: 'AG-UI', file: 'ag-ui' },
-  { name: 'CopilotKit', file: 'copilotkit' },
-  { name: 'Angular', file: 'angular' },
-  { name: 'React', file: 'react' },
-  { name: 'Vue', file: 'vuedotjs' },
-  { name: 'Prompt API', file: 'googlechrome' },
-  { name: 'WebLLM', file: 'mlc', wide: true },
-  { name: 'transformers.js', file: 'huggingface' },
-  { name: 'WebGPU', file: 'webgpu' },
-  { name: 'MCP · WebMCP', file: 'modelcontextprotocol' },
-] as const;
-
 const features = [
   {
-    title: 'Three engines',
-    text: 'Prompt API (Gemini Nano, Phi-4-mini), WebLLM on WebGPU, transformers.js on WebGPU or WASM.',
+    title: 'Tool calling',
+    icon: (
+      <path d="M14.7 6.3a5 5 0 0 0-6.4 6.4l-5.6 5.6a2.1 2.1 0 0 0 3 3l5.6-5.6a5 5 0 0 0 6.4-6.4l-3.2 3.2-3-3 3.2-3.2Z" />
+    ),
+    text: 'Tool calling across all supported engines, including validation and repair of malformed calls.',
   },
   {
-    title: 'AG-UI native',
-    text: 'Every model is an AG-UI agent. CopilotKit or any AG-UI client works unchanged.',
-  },
-  {
-    title: 'Tool-call repair',
-    text: 'Broken JSON, wrong names and types are fixed before a call reaches your app.',
-  },
-  {
-    title: 'WebMCP and MCP',
-    text: "Use the page's WebMCP tools and remote MCP servers as agent tools.",
+    title: 'WebMCP and MCP support',
+    icon: (
+      <>
+        <path d="M9 3v4m6-4v4M7 7h10v4a5 5 0 0 1-10 0V7Zm5 9v5" />
+      </>
+    ),
+    text: 'Connect models to tools exposed by the current page or remote MCP servers.',
   },
   {
     title: 'Model manager',
-    text: 'Download with progress, see what is cached, delete models. OPFS or Cache API.',
+    icon: (
+      <>
+        <path d="M5 4h14l3 10v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4L5 4ZM2 14h20M6 17h.01M18 17h.01" />
+      </>
+    ),
+    text: 'Download models with progress, inspect cached models, and delete stored files.',
   },
   {
-    title: 'No server',
-    text: 'Prompts, tools and answers stay on the device. Nothing to deploy.',
-  },
-];
-
-const platforms = [
-  {
-    id: 'angular',
-    name: 'Angular',
-    logo: 'angular',
-    text: 'provideBrowserModels() + CopilotKit Angular',
+    title: 'Server fallback — planned',
+    icon: (
+      <path d="M7 18H6a4 4 0 0 1-.7-7.9 7 7 0 0 1 13.5-1.7A5 5 0 0 1 19 18H7Z" />
+    ),
+    text: 'Use a server-hosted model when local inference isn’t available.',
   },
   {
-    id: 'react',
-    name: 'React',
-    logo: 'react',
-    text: 'useModelStore() + CopilotKit React',
+    title: 'Built on existing standards',
+    icon: (
+      <>
+        <circle cx="12" cy="4" r="2.5" />
+        <circle cx="5" cy="19" r="2.5" />
+        <circle cx="19" cy="19" r="2.5" />
+        <path d="m10.9 6.3-4.8 10.4m7-10.4 4.8 10.4M7.5 19h9" />
+      </>
+    ),
+    text: 'AG-UI events for responses, tool calls, and model-loading progress. Connect to CopilotKit or another compatible client.',
   },
   {
-    id: 'vue',
-    name: 'Vue',
-    logo: 'vuedotjs',
-    text: 'useModelStore() + CopilotKit Vue',
-  },
-  {
-    id: 'vanilla',
-    name: 'Vanilla',
-    logo: 'typescript',
-    text: 'Plain @ag-ui/client, no framework',
+    title: 'Context management',
+    icon: (
+      <>
+        <path d="m12 3 10 5-10 5L2 8l10-5Zm-10 9 10 5 10-5M2 16l10 5 10-5" />
+      </>
+    ),
+    text: 'Automatically summarize older turns to keep long conversations within the model’s context window.',
   },
 ];
 
@@ -77,56 +67,50 @@ import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 import { WebLlmEngine } from '@soverius-ai/browser-models/web-llm';
 
 const agent = new BrowserModelsAgent({
-  models: {
-    nano: new PromptApiEngine(),
-    qwen: new WebLlmEngine('Qwen3-0.6B-q4f16_1-MLC'),
-  },
-  defaultModel: 'nano',
+  models: [
+    new PromptApiEngine(),
+    new WebLlmEngine('Qwen3-0.6B-q4f16_1-MLC'),
+  ],
+  prompt: 'You are a friendly assistant. Use hello when asked to greet.',
+  localTools: [
+    {
+      name: 'hello',
+      description: 'Log a hello world greeting.',
+      async execute() {
+        console.log('Hello world!');
+      },
+    },
+  ],
 });
 
-// An AG-UI agent: hand it to CopilotKit or any AG-UI client.
-agent.addMessage({ id: '1', role: 'user', content: 'Hello' });
+agent.addMessage({ id: 'user', role: 'user', content: 'Say hello.' });
 await agent.runAgent();`;
-
-function Logo({ file, className }: { file: string; className?: string }) {
-  return (
-    <img
-      src={`/img/logos/${file}.svg`}
-      alt=""
-      className={className}
-      loading="lazy"
-    />
-  );
-}
 
 export default function Home() {
   return (
     <Layout
-      title="LLMs in the browser, speaking AG-UI"
-      description="Run LLMs in the browser as AG-UI agents. By Soverius AI."
+      title="One API to rule them all"
+      description="Use the Prompt API, WebLLM, or Transformers.js with one consistent API."
     >
       <header className="hero hero--browser-models">
         <div className="container">
-          <a className="hero__badge" href={site}>
-            <img src="/img/favicon.svg" alt="" /> by Soverius AI
-          </a>
-          <h1 className="hero__title">
-            LLMs in the browser.
-            <br />
-            <span className="hero__accent">Speaking AG-UI.</span>
+          <h1 className="hero__brand hero__title">
+            <span className="sr-only">browser models</span>
+            <BrowserModelsWordmark />
           </h1>
+          <p className="hero__slogan">One API to rule them all</p>
           <p className="hero__subtitle">
-            Run Gemini Nano, WebLLM and transformers.js models on the user's
-            device and plug them into CopilotKit or any AG-UI client.
+            Use the Prompt API, WebLLM, or Transformers.js with one consistent
+            API. Server-model fallback is planned.
           </p>
           <div className="hero__buttons">
             <Link
-              className="button button--primary button--lg"
+              className="button button--secondary-brand button--lg"
               to="/playground"
             >
               Try it in your browser
             </Link>
-            <Link className="button button--secondary button--lg" to="/docs">
+            <Link className="button button--outline button--lg" to="/docs">
               Read the docs
             </Link>
           </div>
@@ -136,20 +120,12 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="logo-strip" aria-label="Works with">
+      <section
+        className="model-overview-section"
+        aria-label="One API for browser runtimes and server fallback"
+      >
         <div className="container">
-          <p className="logo-strip__title">Works with</p>
-          <ul className="logo-strip__list">
-            {logos.map((logo) => (
-              <li
-                key={logo.name}
-                className={'wide' in logo ? 'logo--wide' : undefined}
-              >
-                <Logo file={logo.file} className="logo--mono" />
-                <span>{logo.name}</span>
-              </li>
-            ))}
-          </ul>
+          <ModelOverview />
         </div>
       </section>
 
@@ -157,78 +133,46 @@ export default function Home() {
         <div className="feature-grid">
           {features.map((feature) => (
             <div key={feature.title} className="feature-card">
-              <h3>{feature.title}</h3>
+              <h3>
+                <svg
+                  className="feature-card__icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  {feature.icon}
+                </svg>
+                <span>{feature.title}</span>
+              </h3>
               <p>{feature.text}</p>
             </div>
           ))}
         </div>
 
-        <div className="code-section">
-          <div>
-            <h2>A few lines to an agent</h2>
-            <p>
-              Pick the models, pick the default. Users switch models at runtime;
-              nothing is chosen for them.
-            </p>
-            <Link className="button button--outline button--primary" to="/docs">
-              Getting started
-            </Link>
-          </div>
+        <section className="code-section">
+          <h2>A browser agent with tools</h2>
           <CodeBlock language="ts">{example}</CodeBlock>
-        </div>
-
-        <h2 className="text--center margin-top--xl">
-          Try it with your framework
-        </h2>
-        <div className="platform-grid">
-          {platforms.map((platform) => (
-            <Link
-              key={platform.id}
-              className="platform-card"
-              to={`/playground?platform=${platform.id}`}
-            >
-              <Logo file={platform.logo} className="logo--mono" />
-              <strong>{platform.name}</strong>
-              <span>{platform.text}</span>
-            </Link>
-          ))}
-        </div>
+        </section>
       </main>
 
-      <section className="soverius-band">
+      <section className="soverius-band" aria-label="About Soverius AI">
         <div className="container soverius-band__inner">
-          <div>
+          <div className="soverius-band__brand">
             <img
-              src="/img/soverius-logo-dark.svg"
+              src="/img/soverius-logo.svg"
               alt="Soverius AI"
               className="soverius-band__logo"
             />
-            <h2>Production AI engineering for application teams</h2>
-            <p>
-              browser-models is built and maintained by Soverius AI. Get new
-              releases, talks and Quantized AI News in your inbox.
-            </p>
+            <p>Built and maintained by Soverius AI.</p>
           </div>
-          <div className="soverius-band__actions">
-            <a
-              className="button button--lg button--secondary-brand"
-              href={`${site}/newsletter`}
-            >
-              Subscribe to the newsletter
-            </a>
-            <a
-              className="button button--lg button--outline button--white"
-              href={`${site}/courses`}
-            >
-              Workshops
-            </a>
-            <a
-              className="button button--lg button--outline button--white"
-              href={`${site}/contact`}
-            >
-              Discuss your project
-            </a>
-          </div>
+          <a className="soverius-band__link" href={site}>
+            Official website <span aria-hidden="true">↗</span>
+          </a>
         </div>
       </section>
     </Layout>

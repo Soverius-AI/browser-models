@@ -4,13 +4,48 @@ import type * as Preset from '@docusaurus/preset-classic';
 const site = 'https://soverius.ai';
 const github = 'https://github.com/Soverius-AI/browser-models';
 
+const prismTheme = {
+  plain: {
+    color: 'var(--color-base-content)',
+    backgroundColor: 'var(--color-base-200)',
+  },
+  styles: [
+    {
+      types: ['comment', 'prolog', 'doctype', 'cdata'],
+      style: { color: 'var(--ifm-font-color-secondary)' },
+    },
+    {
+      types: ['keyword', 'tag', 'selector'],
+      style: { color: 'var(--color-primary)' },
+    },
+    {
+      types: ['function', 'class-name', 'builtin'],
+      style: { color: 'var(--color-accent)' },
+    },
+    {
+      types: ['string', 'char', 'attr-value', 'regex'],
+      style: {
+        color:
+          'color-mix(in oklch, var(--color-success), var(--color-base-content) 25%)',
+      },
+    },
+    {
+      types: ['number', 'boolean', 'constant'],
+      style: {
+        color:
+          'color-mix(in oklch, var(--color-secondary), var(--color-base-content) 25%)',
+      },
+    },
+  ],
+};
+
 const config: Config = {
   title: 'browser-models by Soverius AI',
-  tagline: 'Browser models as AG-UI agents',
+  tagline: 'One API to rule them all',
   // Public origin for canonical links and the sitemap; set at build time (see Dockerfile).
   url: process.env['SITE_URL'] ?? 'https://browser-models.soverius.ai',
   baseUrl: '/',
-  favicon: 'img/favicon.svg',
+  favicon: 'img/browser-models-mark.svg',
   onBrokenLinks: 'throw',
   markdown: { mermaid: true },
   themes: ['@docusaurus/theme-mermaid'],
@@ -28,12 +63,12 @@ const config: Config = {
     ],
   ],
   themeConfig: {
+    prism: { theme: prismTheme, darkTheme: prismTheme },
     navbar: {
-      title: 'browser-models',
       logo: {
-        alt: 'Soverius AI',
-        src: 'img/soverius-logo.svg',
-        srcDark: 'img/soverius-logo-dark.svg',
+        alt: 'browser models',
+        src: 'img/browser-models-wordmark.svg',
+        srcDark: 'img/browser-models-wordmark-dark.svg',
       },
       items: [
         { to: '/docs', label: 'Docs', position: 'left' },
@@ -44,10 +79,10 @@ const config: Config = {
       ],
     },
     footer: {
-      style: 'dark',
+      style: 'light',
       logo: {
         alt: 'Soverius AI',
-        src: 'img/soverius-logo-dark.svg',
+        src: 'img/soverius-logo.svg',
         href: site,
         height: 32,
       },
@@ -91,7 +126,7 @@ const config: Config = {
       ],
       copyright: `© ${new Date().getFullYear()} Soverius AI · MIT licensed`,
     },
-    colorMode: { respectPrefersColorScheme: true },
+    colorMode: { defaultMode: 'dark', respectPrefersColorScheme: false },
   } satisfies Preset.ThemeConfig,
 };
 

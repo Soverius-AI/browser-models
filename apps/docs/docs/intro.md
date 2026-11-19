@@ -5,7 +5,9 @@ title: Overview
 
 # browser-models
 
-Models that run in the browser, as [AG-UI](https://docs.ag-ui.com) agents. Any AG-UI client works, for example CopilotKit.
+Use the Prompt API, WebLLM, or ONNX through transformers.js with one consistent API. Server-model fallback is planned for devices where local inference isn’t available.
+
+The agent exposes [AG-UI](https://docs.ag-ui.com) events, so you can connect it to CopilotKit or another AG-UI client.
 
 | Engine          | Class                  | Runs on                                 | Model storage              |
 | --------------- | ---------------------- | --------------------------------------- | -------------------------- |
