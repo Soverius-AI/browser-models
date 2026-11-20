@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 
 /** Content of the agent's `soverius.model` activity events (model loading progress). */
 export const modelActivitySchema = z.object({

@@ -1,7 +1,5 @@
-import { z } from 'zod';
+import { asObject } from './lib/json.ts';
 import type { LocalTool, LocalToolSource } from './lib/tools.ts';
-
-const jsonSchema = z.record(z.string(), z.unknown());
 
 /** A tool a page registered with WebMCP (`document.modelContext.registerTool`). */
 export interface PageTool {
@@ -71,7 +69,7 @@ export class WebMcpTools implements LocalToolSource {
   #toLocalTool(context: ModelContextLike, tool: PageTool): LocalTool {
     const { confirm = confirmInBrowser } = this.#options;
     // The schema comes from the page: only a JSON object is passed on.
-    const parameters = jsonSchema.safeParse(tool.inputSchema).data;
+    const parameters = asObject(tool.inputSchema);
     return {
       name: tool.name,
       description: tool.description,

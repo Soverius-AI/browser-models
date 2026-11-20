@@ -1,6 +1,6 @@
 import type { WritableSignal } from '@angular/core';
 import { registerComponent, registerFrontendTool } from '@copilotkit/angular';
-import { z } from 'zod';
+import * as z from 'zod';
 import { IncidentCardComponent } from './incident-card.component';
 import { createBackgroundTool } from './tool-feature-model';
 import { WeatherCardComponent } from './weather-card.component';
