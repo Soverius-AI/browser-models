@@ -5,9 +5,9 @@ import {
 } from '@ag-ui/client';
 import { EventType, type Event as AgUiEvent } from '@ag-ui/core';
 import { Observable } from 'rxjs';
-import { z } from 'zod';
 import type { Compaction } from './lib/compaction.ts';
 import type { Engine } from './lib/engine.ts';
+import { asObject, asString } from './lib/json.ts';
 import type { RepairOptions } from './lib/repair.ts';
 import { AgentRun } from './lib/run.ts';
 import { SummaryCompaction } from './lib/summary-compaction.ts';
@@ -173,11 +173,10 @@ export interface DevtoolsMessage {
   readonly event: BaseEvent;
 }
 
-const forwardedModel = z.object({ soverius: z.object({ model: z.string() }) });
-
 /** The model a run picked with `forwardedProps: { soverius: { model } }`, if any. */
 function modelFromInput(input: RunAgentInput): string | undefined {
-  return forwardedModel.safeParse(input.forwardedProps).data?.soverius.model;
+  const soverius = asObject(asObject(input.forwardedProps)?.['soverius']);
+  return asString(soverius?.['model']);
 }
 
 async function* unknownModel(

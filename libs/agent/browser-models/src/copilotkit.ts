@@ -6,7 +6,7 @@ import {
   type RunAgentInput,
 } from '@ag-ui/client';
 import { concatMap, from, type Observable } from 'rxjs';
-import { z } from 'zod';
+import { asArray, asObject, asString } from './lib/json.ts';
 import { closeJson } from './lib/partial-json.ts';
 
 /** The tool CopilotKit registers when `openGenerativeUI` is set, and the activity it renders. */
@@ -14,31 +14,36 @@ const TOOL_NAME = 'generateSandboxedUi';
 const ACTIVITY_TYPE = 'open-generative-ui';
 
 /** The tool calls in a `MESSAGES_SNAPSHOT`, as far as this module reads them. */
-const correctedCalls = z.object({
-  messages: z.array(
-    z.object({
-      toolCalls: z
-        .array(
-          z.object({
-            id: z.string(),
-            function: z.object({ arguments: z.string() }),
-          }),
-        )
-        .optional(),
-    }),
-  ),
-});
+function correctedCalls(
+  event: unknown,
+): { readonly id: string; readonly arguments: string }[] {
+  return (asArray(asObject(event)?.['messages']) ?? [])
+    .flatMap((message) => asArray(asObject(message)?.['toolCalls']) ?? [])
+    .flatMap((toolCall) => {
+      const call = asObject(toolCall);
+      const id = asString(call?.['id']);
+      const args = asString(asObject(call?.['function'])?.['arguments']);
+      return id !== undefined && args !== undefined
+        ? [{ id, arguments: args }]
+        : [];
+    });
+}
 
-/** What the model has written of the tool's arguments so far. */
-const sandboxArguments = z
-  .object({
-    initialHeight: z.number(),
-    css: z.string(),
-    html: z.string(),
-    jsFunctions: z.string(),
-    jsExpressions: z.array(z.string()),
-  })
-  .partial();
+/** What the model has written of the tool's arguments so far. A wrong type counts as not written. */
+function sandboxArguments(written: Record<string, unknown>) {
+  const { initialHeight } = written;
+  const expressions = asArray(written['jsExpressions']);
+  return {
+    initialHeight:
+      typeof initialHeight === 'number' ? initialHeight : undefined,
+    css: asString(written['css']),
+    html: asString(written['html']),
+    jsFunctions: asString(written['jsFunctions']),
+    jsExpressions: expressions?.every((item) => typeof item === 'string')
+      ? expressions
+      : undefined,
+  };
+}
 
 /**
  * CopilotKit's Open Generative UI for an agent that runs in the browser.
@@ -76,14 +81,11 @@ function withActivity(
   };
   if (type === EventType.MESSAGES_SNAPSHOT) {
     // The agent corrects a streamed call this way after repairing it: show the corrected page.
-    const corrected = correctedCalls.safeParse(event).data?.messages ?? [];
-    const updates = corrected
-      .flatMap((message) => message.toolCalls ?? [])
-      .flatMap((toolCall) => {
-        const open = calls.get(toolCall.id);
-        open?.replace(toolCall.function.arguments);
-        return open ? [open.activity(false)] : [];
-      });
+    const updates = correctedCalls(event).flatMap((corrected) => {
+      const open = calls.get(corrected.id);
+      open?.replace(corrected.arguments);
+      return open ? [open.activity(false)] : [];
+    });
     return [event, ...updates];
   }
   if (!toolCallId) return [event];
@@ -127,7 +129,7 @@ class SandboxCall {
   /** Replaces what was streamed with the complete, repaired arguments. */
   replace(json: string): void {
     this.#json = json;
-    const html = sandboxArguments.safeParse(this.#read()).data?.html ?? '';
+    const html = sandboxArguments(this.#read()).html ?? '';
     // The pieces shown so far only stay when the repaired HTML continues them.
     if (!html.startsWith(this.#html.join(''))) {
       this.#html.length = 0;
@@ -138,7 +140,7 @@ class SandboxCall {
   /** The activity message with everything that has arrived. `done`: the call is complete. */
   activity(done: boolean): BaseEvent {
     const written = this.#read();
-    const args = sandboxArguments.safeParse(written).data ?? {};
+    const args = sandboxArguments(written);
     // The model writes the parameters in order: all but the last one are finished.
     const keys = Object.keys(written);
     const finished = (key: string) =>
@@ -182,9 +184,8 @@ class SandboxCall {
    */
   #read(): Record<string, unknown> {
     try {
-      this.#written = z
-        .record(z.string(), z.unknown())
-        .parse(JSON.parse(closeJson(this.#json).json || '{}'));
+      const written = asObject(JSON.parse(closeJson(this.#json).json || '{}'));
+      if (written) this.#written = written;
     } catch {
       // Keep what was readable before.
     }

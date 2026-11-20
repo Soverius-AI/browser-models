@@ -90,6 +90,12 @@ describe('ArgumentsSchema', () => {
       [4],
     ],
     [
+      'a string to a number that may be null',
+      { type: ['integer', 'null'] },
+      '5',
+      5,
+    ],
+    [
       'nested objects',
       {
         type: 'object',
@@ -163,19 +169,179 @@ describe('ArgumentsSchema', () => {
     ]);
   });
 
-  it('only asks for an object when zod cannot read the schema', () => {
-    const json = { type: 'object', not: { required: ['city'] } };
+  it.each([
+    [
+      'the length of a string',
+      { type: 'string', minLength: 2, maxLength: 3 },
+      'abc',
+      'a',
+      'arguments.key: Too small: expected string to have >=2 characters',
+    ],
+    [
+      'the length of an array',
+      { type: 'array', maxItems: 1 },
+      [1],
+      [1, 2],
+      'arguments.key: Too big: expected array to have <=1 items',
+    ],
+    [
+      'a limit the value must not reach',
+      { type: 'number', exclusiveMinimum: 0 },
+      0.5,
+      0,
+      'arguments.key: Too small: expected number to be >0',
+    ],
+    [
+      'a step, also in floating point',
+      { type: 'number', multipleOf: 0.1 },
+      0.3,
+      0.35,
+      'arguments.key: Invalid number: must be a multiple of 0.1',
+    ],
+    [
+      'a constant',
+      { const: 'on' },
+      'on',
+      'off',
+      'arguments.key: Invalid input: expected "on"',
+    ],
+    [
+      'every part of allOf',
+      { allOf: [{ type: 'number' }, { minimum: 1 }] },
+      1,
+      0,
+      'arguments.key: Too small: expected number to be >=1',
+    ],
+    [
+      'items by their position',
+      { type: 'array', prefixItems: [{ type: 'string' }], items: false },
+      ['a'],
+      ['a', 'b'],
+      'arguments.key[1]: Invalid input: expected never, received string',
+    ],
+    [
+      'keys that are not listed',
+      { type: 'object', additionalProperties: { type: 'boolean' } },
+      { other: true },
+      { other: 'yes' },
+      'arguments.key.other: Invalid input: expected boolean, received string',
+    ],
+    [
+      'a keyword that is reported in the words of the validator',
+      { type: 'string', format: 'email' },
+      'a@example.com',
+      'nobody',
+      'arguments.key: String does not match format "email".',
+    ],
+    [
+      'a required key that is not listed',
+      { type: 'object', required: ['id'] },
+      { id: 1 },
+      {},
+      'arguments.key.id is required',
+    ],
+  ])('checks %s', (_name, property, valid, invalid, problem) => {
+    const json = { type: 'object', properties: { key: property } };
+    expect(checkSchema({ key: valid }, json)).toEqual({
+      value: { key: valid },
+      errors: [],
+      coerced: false,
+    });
+    expect(checkSchema({ key: invalid }, json).errors).toEqual([problem]);
+  });
+
+  it('keeps the keys a pattern allows when other keys are not allowed', () => {
+    const json = {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      patternProperties: { '^x-': { type: 'number' } },
+      additionalProperties: false,
+    };
+    expect(checkSchema({ id: 'a', 'x-rate': '2', other: 1 }, json)).toEqual({
+      value: { id: 'a', 'x-rate': 2 },
+      errors: [],
+      coerced: true,
+    });
+  });
+
+  it('follows a schema that refers to itself', () => {
+    const json = {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        children: { type: 'array', items: { $ref: '#' } },
+      },
+      required: ['name'],
+    };
+    const tree = { name: 'a', children: [{ name: 'b', children: [{}] }] };
+    expect(checkSchema(tree, json).errors).toEqual([
+      'arguments.children[0].children[0].name is required',
+    ]);
+  });
+
+  it('adds defaults after the given keys, and only to valid arguments', () => {
+    const valid = checkSchema({ unit: 'celsius', city: 'Vienna' }, schema);
+    expect(JSON.stringify(valid.value)).toBe(
+      '{"unit":"celsius","city":"Vienna","days":1}',
+    );
+    const invalid = checkSchema({ unit: 'kelvin', city: 'Vienna' }, schema);
+    expect(invalid.value).toEqual({ unit: 'kelvin', city: 'Vienna' });
+  });
+
+  it('adds a default named __proto__ as an ordinary key', () => {
+    const json: JsonSchema = JSON.parse(
+      '{"type":"object","properties":{"__proto__":{"default":{"admin":true}}}}',
+    );
+    const { value } = checkSchema({}, json);
+    expect(Object.getPrototypeOf(value)).toBe(Object.prototype);
+    expect(JSON.stringify(value)).toBe('{"__proto__":{"admin":true}}');
+  });
+
+  it('does not drop a key because one alternative does not allow it', () => {
+    const shape = (key: string) => ({
+      type: 'object',
+      properties: { [key]: { type: 'number' } },
+      required: [key],
+      additionalProperties: false,
+    });
+    const json = {
+      type: 'object',
+      properties: { shape: { anyOf: [shape('radius'), shape('side')] } },
+    };
+    const check = checkSchema({ shape: { side: 'wide' } }, json);
+    expect(check.value).toEqual({ shape: { side: 'wide' } });
+    expect(check.errors).toEqual([
+      'arguments.shape: "radius" is required, or Invalid input: expected number, received string',
+    ]);
+  });
+
+  it('only asks for an object when the schema cannot be read', () => {
+    const json = { $ref: '#/$defs/none' };
     expect(checkSchema({ days: '3' }, json)).toEqual({
       value: { days: '3' },
       errors: [],
       coerced: false,
     });
     expect(checkSchema('Vienna', json).errors).toEqual([
-      'arguments: Invalid input: expected record, received string',
+      'arguments: Invalid input: expected object, received string',
     ]);
   });
 
-  it('compiles a schema once', () => {
+  it.each([
+    ['a reference to another document', { $ref: 'https://example.com/a.json' }],
+    ['a reference that leads nowhere', { $ref: '#/$defs/none' }],
+    ['a reference that leads to itself', { $ref: '#/properties/key' }],
+    ['a pattern that is no regular expression', { pattern: '(' }],
+  ])('does not check a schema with %s', (_name, property) => {
+    const json = { type: 'object', properties: { key: property } };
+    expect(checkSchema({ key: 'text' }, json)).toEqual({
+      value: { key: 'text' },
+      errors: [],
+      coerced: false,
+    });
+  });
+
+  it('makes the checker of a schema once', () => {
     expect(ArgumentsSchema.of(schema)).toBe(ArgumentsSchema.of(schema));
   });
 });

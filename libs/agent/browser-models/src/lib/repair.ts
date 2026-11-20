@@ -1,7 +1,7 @@
 import { jsonrepair } from 'jsonrepair';
 import { closeJson } from './partial-json.ts';
-import { z } from 'zod';
 import type { JsonSchema } from './engine.ts';
+import { asObject } from './json.ts';
 import { ArgumentsSchema } from './schema.ts';
 import type { ToolCall, ToolSpec } from './tools.ts';
 
@@ -35,13 +35,12 @@ export interface RepairOptions {
   }) => Promise<ToolCall | undefined> | ToolCall | undefined;
 }
 
-const jsonObject = z.record(z.string(), z.unknown());
 /** A tool call as models write it. Some say `parameters` for `arguments`. */
-const callEnvelope = z.looseObject({
-  name: z.string(),
-  arguments: z.unknown().optional(),
-  parameters: z.unknown().optional(),
-});
+interface CallEnvelope {
+  readonly name: string;
+  readonly arguments?: unknown;
+  readonly parameters?: unknown;
+}
 /** For tools without parameters. One object, so its compiled schema is reused. */
 const anyObject: JsonSchema = { type: 'object' };
 
@@ -90,18 +89,18 @@ export class ToolCallRepair {
     const closed = closeJson(raw);
     const exact = parse(closed.json);
     const parsed = exact ?? parse(() => jsonrepair(raw));
-    const call = callEnvelope.safeParse(parsed).data;
+    const call = readCall(parsed);
     if (!call) return undefined;
     // The model is still writing the name itself.
-    const lastKey = Object.keys(jsonObject.safeParse(parsed).data ?? {}).at(-1);
+    const lastKey = Object.keys(asObject(parsed) ?? {}).at(-1);
     if (lastKey === 'name' && (exact === undefined || closed.inString))
       return undefined;
     const tool = findTool(call.name, this.#tools);
     if (!tool) return undefined;
 
-    const args = jsonObject.safeParse(call.arguments ?? call.parameters);
-    if (!args.success) return { name: tool.name, argumentsJson: '' };
-    const json = JSON.stringify(args.data);
+    const args = asObject(call.arguments ?? call.parameters);
+    if (!args) return { name: tool.name, argumentsJson: '' };
+    const json = JSON.stringify(args);
     if (exact === undefined)
       return { name: tool.name, argumentsJson: certainStart(json, raw) };
     // What is still open gets closed later: leave the closing characters out.
@@ -114,7 +113,7 @@ export class ToolCallRepair {
 
   async #tryRepair(raw: string): Promise<RepairResult> {
     const steps: RepairStep[] = [];
-    const call = callEnvelope.safeParse(parseJson(raw, steps)).data;
+    const call = readCall(parseJson(raw, steps));
     if (!call) {
       return {
         ok: false,
@@ -190,6 +189,13 @@ function certainStart(json: string, raw: string): string {
   );
 }
 
+/** The call in `value`, when it is an object with a name. */
+function readCall(value: unknown): CallEnvelope | undefined {
+  const call = asObject(value);
+  const name = call?.['name'];
+  return call && typeof name === 'string' ? { ...call, name } : undefined;
+}
+
 /** The parsed JSON, or undefined when it is not valid JSON. */
 function parse(json: string | (() => string)): unknown {
   try {
@@ -201,7 +207,7 @@ function parse(json: string | (() => string)): unknown {
 
 function checkArguments(args: unknown, tool: ToolSpec) {
   const check = ArgumentsSchema.of(tool.parameters ?? anyObject).check(args);
-  return { ...check, value: jsonObject.safeParse(check.value).data ?? {} };
+  return { ...check, value: asObject(check.value) ?? {} };
 }
 
 function parseJson(text: string, steps: RepairStep[]): unknown {
@@ -220,7 +226,7 @@ function parseJson(text: string, steps: RepairStep[]): unknown {
 
 /** A re-ask may be answered with a whole call (`{name, arguments}`) instead of the arguments. */
 function unwrapCall(value: unknown): unknown {
-  const call = callEnvelope.safeParse(value).data;
+  const call = readCall(value);
   return call ? (call.arguments ?? call.parameters ?? value) : value;
 }
 

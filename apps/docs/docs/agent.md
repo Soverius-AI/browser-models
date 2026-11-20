@@ -57,7 +57,7 @@ Every run calls `engine.load()` first. While the engine reports progress, the ru
 
 ```ts
 import { MODEL_ACTIVITY } from '@soverius-ai/browser-models'; // 'soverius.model'
-import { z } from 'zod';
+import * as z from 'zod';
 
 // event.content; progress is 0–1
 const modelActivity = z.object({
