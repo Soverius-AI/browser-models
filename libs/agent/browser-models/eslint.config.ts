@@ -8,6 +8,8 @@ export default [
       '@nx/dependency-checks': [
         'error',
         {
+          // Referenced by a triple-slash directive retained in published declarations.
+          ignoredDependencies: ['@types/dom-chromium-ai'],
           ignoredFiles: [
             '{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}',
             '{projectRoot}/vitest.config.{js,ts,mjs,mts}',
