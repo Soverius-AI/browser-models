@@ -12,10 +12,3 @@ allowBuilds:
   '@scarf/scarf': false
   # Funding message only.
   core-js: false
-
-# AG-UI asks for zod 3.25 but only imports `zod/v4`, so it can share our zod 4 instead of bundling
-# a second copy. CopilotKit and A2UI must stay on zod 3: A2UI reads zod 3 internals and fails to
-# load on zod 4. Keep the version equal to zod in package.json.
-overrides:
-  '@ag-ui/client>zod': 4.6.7
-  '@ag-ui/proto>zod': 4.6.7
