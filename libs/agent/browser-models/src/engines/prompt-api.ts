@@ -1,3 +1,5 @@
+/// <reference types="dom-chromium-ai" preserve="true" />
+
 import type {
   Availability,
   ChatMessage,
@@ -7,34 +9,16 @@ import type {
 } from '../lib/engine.ts';
 import { SharedLoad } from './shared-load.ts';
 
-/** The part of the browser's built-in `LanguageModel` API (Chrome, Edge) this engine uses. */
-export interface LanguageModelApi {
-  availability(options?: LanguageModelExpectations): Promise<Availability>;
-  create(
-    options?: LanguageModelExpectations & {
-      initialPrompts?: readonly ChatMessage[];
-      signal?: AbortSignal;
-      monitor?: (monitor: EventTarget) => void;
-    },
-  ): Promise<LanguageModelSession>;
-}
-
-/** The languages a session reads and writes. Chrome checks support for them up front. */
-export interface LanguageModelExpectations {
-  expectedInputs?: readonly { type: 'text'; languages: readonly string[] }[];
-  expectedOutputs?: readonly { type: 'text'; languages: readonly string[] }[];
-}
-
-export interface LanguageModelSession {
-  promptStreaming(
-    input: string,
-    options?: { signal?: AbortSignal; responseConstraint?: unknown },
-  ): ReadableStream<string>;
-  destroy(): void;
-  /** How many tokens the session holds. Older browsers call it `inputQuota`. */
-  readonly contextWindow?: number;
-  readonly inputQuota?: number;
-}
+/** Native Prompt API declarations supplied by @types/dom-chromium-ai. */
+export type LanguageModelApi = Pick<
+  typeof LanguageModel,
+  'availability' | 'create'
+>;
+export type LanguageModelExpectations = Pick<
+  LanguageModelCreateCoreOptions,
+  'expectedInputs' | 'expectedOutputs'
+>;
+export type LanguageModelSession = LanguageModel;
 
 export interface PromptApiOptions {
   /** Languages of the conversation, for example `['en', 'de']`. Default `['en']`. */
@@ -62,8 +46,8 @@ export class PromptApiEngine implements Engine {
     const languages = options.languages ?? ['en'];
     this.#languageModel = options.languageModel;
     this.#expectations = {
-      expectedInputs: [{ type: 'text', languages }],
-      expectedOutputs: [{ type: 'text', languages }],
+      expectedInputs: [{ type: 'text', languages: [...languages] }],
+      expectedOutputs: [{ type: 'text', languages: [...languages] }],
     };
     this.#download = new SharedLoad(
       (onProgress, signal) => this.#startDownload(onProgress, signal),
@@ -117,7 +101,9 @@ export class PromptApiEngine implements Engine {
       ? previous.session
       : await this.#requiredApi().create({
           ...this.#expectations,
-          initialPrompts: history,
+          initialPrompts: [...history] as NonNullable<
+            LanguageModelCreateOptions['initialPrompts']
+          >,
           ...(signal ? { signal } : {}),
         });
     this.#contextWindowSize = session.contextWindow ?? session.inputQuota;
@@ -165,7 +151,7 @@ export class PromptApiEngine implements Engine {
       signal,
       monitor(monitor) {
         monitor.addEventListener('downloadprogress', (event) =>
-          onProgress((event as ProgressEvent).loaded),
+          onProgress(event.loaded),
         );
       },
     });
@@ -176,7 +162,7 @@ export class PromptApiEngine implements Engine {
   #api(): LanguageModelApi | undefined {
     return (
       this.#languageModel ??
-      (globalThis as { LanguageModel?: LanguageModelApi }).LanguageModel
+      (typeof LanguageModel === 'undefined' ? undefined : LanguageModel)
     );
   }
 

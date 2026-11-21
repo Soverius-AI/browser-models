@@ -6,9 +6,9 @@ import { PromptApiEngine, type LanguageModelApi } from './prompt-api.ts';
 function fakeLanguageModel(model = new FakeModel()) {
   model.downloaded = true;
   const calls = {
-    initialPrompts: [] as (readonly ChatMessage[] | undefined)[],
+    initialPrompts: [] as LanguageModelCreateOptions['initialPrompts'][],
     expectations: [] as unknown[],
-    prompts: [] as string[],
+    prompts: [] as LanguageModelPrompt[],
     constraints: [] as unknown[],
     destroyed: 0,
   };
@@ -24,7 +24,9 @@ function fakeLanguageModel(model = new FakeModel()) {
         expectedInputs: options?.expectedInputs,
         expectedOutputs: options?.expectedOutputs,
       });
-      const monitor = new EventTarget();
+      const monitor = Object.assign(new EventTarget(), {
+        ondownloadprogress: null,
+      });
       options?.monitor?.(monitor);
       await model.load((loaded) =>
         monitor.dispatchEvent(
@@ -51,7 +53,7 @@ function fakeLanguageModel(model = new FakeModel()) {
           model.stop();
           model.free();
         },
-      };
+      } as LanguageModel;
     },
   };
   return { api, calls };
