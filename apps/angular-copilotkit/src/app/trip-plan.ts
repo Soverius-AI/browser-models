@@ -4,7 +4,7 @@ import {
   type AngularToolCall,
   type ToolRenderer,
 } from '@copilotkit/angular';
-import { z } from 'zod';
+import * as z from 'zod';
 import { streamingToolCall } from './streaming-tool-call';
 
 type TripArgs = { city: string; stops: string[] };

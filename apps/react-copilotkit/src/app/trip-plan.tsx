@@ -1,5 +1,5 @@
 import { ToolCallStatus, useFrontendTool } from '@copilotkit/react-core/v2';
-import { z } from 'zod';
+import * as z from 'zod';
 
 /**
  * Registers the `planTrip` tool. `render` is called again for every arguments delta, with the

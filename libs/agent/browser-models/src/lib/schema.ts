@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import type { JsonSchema } from './engine.ts';
+import { JsonSchemaChecker, type Issue, type Path } from './json-schema.ts';
 
 export interface SchemaCheck {
   /** The value after safe coercions such as "5" → 5. */
@@ -10,23 +10,20 @@ export interface SchemaCheck {
   readonly coerced: boolean;
 }
 
-type Issue = z.core.$ZodIssue;
-
-/** How often the mistakes zod reports are fixed before the rest is reported. */
+/** How often the reported mistakes are fixed before the rest is reported. */
 const MAX_FIXES = 3;
-/** An object or array: something a zod issue path can lead into. */
-const container = z.instanceof(Object);
 const compiled = new WeakMap<JsonSchema, ArgumentsSchema>();
 
 /**
- * Checks tool arguments against the tool's JSON Schema with zod (`z.fromJSONSchema`) and
- * fixes the safe mistakes small models make: "5" → 5, "true" → true, 5 → "5", value → [value],
- * wrong enum case, `null` for "not given" and keys the schema does not allow.
+ * Checks tool arguments against the tool's JSON Schema and fixes the safe mistakes small
+ * models make: "5" → 5, "true" → true, 5 → "5", value → [value], wrong enum case, `null` for
+ * "not given" and keys the schema does not allow. `JsonSchemaChecker` says which keywords of
+ * the schema are checked.
  */
 export class ArgumentsSchema {
-  readonly #schema: z.ZodType;
+  readonly #checker: JsonSchemaChecker;
 
-  /** The compiled schema, made once per JSON Schema object. */
+  /** The checker of a JSON Schema object, made once. */
   static of(json: JsonSchema): ArgumentsSchema {
     let schema = compiled.get(json);
     if (!schema) compiled.set(json, (schema = new ArgumentsSchema(json)));
@@ -34,58 +31,40 @@ export class ArgumentsSchema {
   }
 
   constructor(json: JsonSchema) {
-    try {
-      this.#schema = z.fromJSONSchema(json);
-    } catch {
-      // JSON Schema that zod cannot read (`not`, `if`/`then`, external `$ref`) must not make
-      // the tool unusable: its arguments only have to be an object.
-      this.#schema = z.record(z.string(), z.unknown());
-    }
+    this.#checker = new JsonSchemaChecker(json);
   }
 
   check(input: unknown): SchemaCheck {
     const value: unknown = structuredClone(input);
     let coerced = false;
     for (let pass = 0; ; pass++) {
-      const result = this.#schema.safeParse(value);
-      if (result.success) {
-        // zod orders keys as the schema does. Arguments that were already sent to the client
-        // must keep their order, so its copy is only used when it has more: the defaults.
-        const filled = size(result.data) !== size(value);
-        return {
-          value: filled ? result.data : value,
-          errors: [],
-          coerced: coerced || filled,
-        };
+      const issues = this.#checker.issues(value);
+      if (issues.length === 0) {
+        // Only valid arguments get the defaults. They go after the given keys: arguments
+        // that were already sent to the client must keep their order.
+        const filled = this.#checker.addDefaults(value);
+        return { value, errors: [], coerced: coerced || filled };
       }
-      const { issues } = result.error;
       const fixed =
         pass < MAX_FIXES && issues.filter((issue) => fix(value, issue)).length;
-      if (!fixed) {
-        const errors = issues.map((issue) => describe(value, issue));
-        return { value, errors, coerced };
-      }
+      if (!fixed) return { value, errors: issues.map(describe), coerced };
       coerced = true;
     }
   }
 }
 
-function size(value: unknown): number {
-  return JSON.stringify(value)?.length ?? 0;
-}
-
 /** Fixes in `root` what `issue` reports. False when there is no safe fix. */
 function fix(root: unknown, issue: Issue): boolean {
-  if (issue.code === 'unrecognized_keys') {
+  if (issue.keys) {
     // Drop keys the schema does not allow instead of failing the whole call.
-    const target = container.safeParse(read(root, issue.path)).data;
+    const target = container(read(root, issue.path));
     return (
       target !== undefined &&
       issue.keys.every((key) => Reflect.deleteProperty(target, key))
     );
   }
   const key = issue.path.at(-1);
-  const parent = container.safeParse(read(root, issue.path.slice(0, -1))).data;
+  const parent = container(read(root, issue.path.slice(0, -1)));
   if (key === undefined || parent === undefined) return false;
 
   const current: unknown = Reflect.get(parent, key);
@@ -94,8 +73,8 @@ function fix(root: unknown, issue: Issue): boolean {
     return Reflect.deleteProperty(parent, key);
 
   let next = current;
-  if (issue.code === 'invalid_type') next = retype(current, issue.expected);
-  if (issue.code === 'invalid_value' && typeof current === 'string') {
+  if (issue.expected) next = retype(current, issue.expected);
+  if (issue.values && typeof current === 'string') {
     const wanted = current.toLowerCase();
     next = issue.values.find(
       (option) => typeof option === 'string' && option.toLowerCase() === wanted,
@@ -131,26 +110,27 @@ function retype(value: unknown, expected: string): unknown {
 }
 
 /** The problem for the model's next attempt, for example `arguments.days: expected int`. */
-function describe(root: unknown, issue: Issue): string {
+function describe(issue: Issue): string {
   const path = issue.path.reduce<string>(
     (text, key) =>
-      typeof key === 'number' ? `${text}[${key}]` : `${text}.${String(key)}`,
+      typeof key === 'number' ? `${text}[${key}]` : `${text}.${key}`,
     'arguments',
   );
-  if (issue.code === 'invalid_type' && read(root, issue.path) === undefined)
-    return `${path} is required`;
-  if (issue.code === 'invalid_union') {
-    // "Invalid input" alone says nothing: name what each alternative expects.
-    const options = issue.errors.flatMap((option) => option[0]?.message ?? []);
-    if (options.length > 0) return `${path}: ${options.join(', or ')}`;
-  }
-  return `${path}: ${issue.message}`;
+  if (issue.missing) return `${path} is required`;
+  // "Invalid input" alone says nothing: name what each alternative expects.
+  const options = issue.options?.flatMap((option) => option[0]?.message ?? []);
+  return `${path}: ${options?.length ? options.join(', or ') : issue.message}`;
 }
 
-/** The value in `root` that a zod issue path leads to. */
-function read(root: unknown, path: readonly PropertyKey[]): unknown {
+/** An object or array: something an issue path can lead into. */
+function container(value: unknown): object | undefined {
+  return typeof value === 'object' && value !== null ? value : undefined;
+}
+
+/** The value in `root` that an issue path leads to. */
+function read(root: unknown, path: Path): unknown {
   return path.reduce<unknown>((node, key) => {
-    const parent = container.safeParse(node).data;
+    const parent = container(node);
     return parent && Reflect.get(parent, key);
   }, root);
 }

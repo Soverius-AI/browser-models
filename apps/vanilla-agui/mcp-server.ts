@@ -4,7 +4,7 @@ import {
   McpServer,
   WebStandardStreamableHTTPServerTransport,
 } from '@modelcontextprotocol/server';
-import { z } from 'zod';
+import * as z from 'zod';
 
 /**
  * A demo MCP server at `/mcp` on the app's own dev and preview servers, built with the

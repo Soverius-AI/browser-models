@@ -2,7 +2,7 @@ import {
   McpServer,
   WebStandardStreamableHTTPServerTransport,
 } from '@modelcontextprotocol/server';
-import { z } from 'zod';
+import * as z from 'zod';
 import { McpTools } from './mcp.ts';
 
 /** The official MCP server SDK, reached through `fetch` without a network. */

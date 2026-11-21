@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useFrontendTool } from '@copilotkit/vue/v2';
 import type { Component } from 'vue';
-import { z } from 'zod';
+import * as z from 'zod';
 import TripPlanCard from './TripPlanCard.vue';
 
 // The card is rendered again for every arguments delta, so it grows while the model is still
