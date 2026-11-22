@@ -13,6 +13,11 @@ import { modelActivityRenderer } from './model-activity';
 import { ModelsPanel } from './models-panel';
 import { TripPlan } from './trip-plan';
 
+// Created once: CopilotKit sets its renderers up again whenever these change.
+const agents = { default: agent };
+const openGenerativeUI = { designSkill: sandboxDesignSkill };
+const activityRenderers = [modelActivityRenderer];
+
 export function App() {
   const state = useModelStore(models);
   useDevtools(agent, import.meta.env.DEV || devtoolsFromUrl());
@@ -21,10 +26,10 @@ export function App() {
     // `agents__unsafe_dev_only` is CopilotKit React's prop for agents that run in the page.
     // (`selfManagedAgents` does the same but logs a license warning.)
     <CopilotKitProvider
-      agents__unsafe_dev_only={{ default: agent }}
+      agents__unsafe_dev_only={agents}
       // Registers the `generateSandboxedUi` tool and the sandbox renderer (JetBrains websandbox).
-      openGenerativeUI={{ designSkill: sandboxDesignSkill }}
-      renderActivityMessages={[modelActivityRenderer]}
+      openGenerativeUI={openGenerativeUI}
+      renderActivityMessages={activityRenderers}
     >
       <main className="flex h-full flex-col">
         <header className="border-b border-base-300 bg-base-100">

@@ -189,13 +189,14 @@ class ActiveTools implements RunTools {
       )
       .join('\n');
     // A real call, not a template: small models copy a placeholder like "<tool name>" as it is.
-    // They copy the example's values too, so it shows the simplest tool, never one such as
-    // generateSandboxedUi whose copied example would be a broken page.
+    // They copy the example's values too, so it shows a simple tool, never one such as
+    // generateSandboxedUi whose copied example would be a broken page. One with an argument, so
+    // the model sees where arguments go: with `{}` some write the name and the arguments apart.
     const simplest = ActiveTools.#simplest(tools);
-    const example = JSON.stringify({
-      name: simplest?.name ?? 'toolName',
-      arguments: ActiveTools.#exampleArguments(simplest?.parameters),
-    });
+    const example = ActiveTools.#format(
+      simplest?.name ?? 'toolName',
+      ActiveTools.#exampleArguments(simplest?.parameters),
+    );
     return [
       'You can call tools. To call one, reply with a block like this and nothing after it:',
       '```tool_call\n' + example + '\n```',
@@ -208,14 +209,31 @@ class ActiveTools implements RunTools {
     ].join('\n');
   }
 
-  /** The tool with the fewest parameters; the first of those. */
+  /**
+   * The tool with the fewest parameters among those with a required one, else the one with the
+   * fewest parameters; the first of those.
+   */
   static #simplest(tools: readonly ToolSpec[]): ToolSpec | undefined {
     const count = (tool: ToolSpec) =>
       Object.keys(ActiveTools.#properties(tool.parameters)).length;
-    return tools.reduce<ToolSpec | undefined>(
-      (best, tool) => (!best || count(tool) < count(best) ? tool : best),
-      undefined,
-    );
+    const required = (tool: ToolSpec) => {
+      const list = tool.parameters?.['required'];
+      return Array.isArray(list) && list.length > 0;
+    };
+    const fewest = (list: readonly ToolSpec[]) =>
+      list.reduce<ToolSpec | undefined>(
+        (best, tool) => (!best || count(tool) < count(best) ? tool : best),
+        undefined,
+      );
+    return fewest(tools.filter(required)) ?? fewest(tools);
+  }
+
+  /** A call as the instructions show it: `{"name": "x", "arguments": {"a": "…"}}`. */
+  static #format(name: string, args: Record<string, unknown>): string {
+    const entries = Object.entries(args)
+      .map(([key, value]) => `${JSON.stringify(key)}: ${JSON.stringify(value)}`)
+      .join(', ');
+    return `{"name": ${JSON.stringify(name)}, "arguments": {${entries}}}`;
   }
 
   static #properties(

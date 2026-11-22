@@ -79,6 +79,24 @@ describe('ToolCallRepair', () => {
     });
   });
 
+  it.each([
+    [
+      'the name on a line, the arguments below',
+      'getWeather\n{"city": "Vienna"}',
+    ],
+    [
+      'the name, then the arguments on the same line',
+      'getWeather {"city": "Vienna"}',
+    ],
+    ['a function call', 'getWeather({"city": "Vienna"})'],
+  ])('reads a call written as %s', async (_, raw) => {
+    expect(await new ToolCallRepair(tools).repair(raw)).toEqual({
+      ok: true,
+      call: { name: 'getWeather', arguments: { city: 'Vienna' } },
+      steps: ['json'],
+    });
+  });
+
   it('explains unknown tools', async () => {
     const result = await new ToolCallRepair(tools).repair(
       '{"name":"sendEmail","arguments":{}}',
@@ -95,6 +113,14 @@ describe('ToolCallRepair.readPartial', () => {
   const repair = new ToolCallRepair([
     { name: 'getWeather', description: 'Weather' },
   ]);
+
+  it('shows a call written name first while it streams', () => {
+    expect(repair.readPartial('getWea')).toBeUndefined();
+    expect(repair.readPartial('getWeather\n{"city": "Vie')).toEqual({
+      name: 'getWeather',
+      argumentsJson: '{"city":"Vie',
+    });
+  });
 
   it('waits for the complete name, then repairs it', () => {
     expect(repair.readPartial('{"name": "get_wea')).toBeUndefined();

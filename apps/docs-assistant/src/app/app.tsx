@@ -9,6 +9,10 @@ import { modelActivityRenderer } from './model-activity';
 /** Inside the docs site's side panel: a compact header. */
 const embedded = new URLSearchParams(location.search).has('embedded');
 
+// Created once: CopilotKit sets its renderers up again whenever these change.
+const agents = { default: agent };
+const activityRenderers = [modelActivityRenderer];
+
 export function App() {
   const state = useModelStore(store);
   useDevtools(agent, import.meta.env.DEV || devtoolsFromUrl());
@@ -16,8 +20,8 @@ export function App() {
 
   return (
     <CopilotKitProvider
-      agents__unsafe_dev_only={{ default: agent }}
-      renderActivityMessages={[modelActivityRenderer]}
+      agents__unsafe_dev_only={agents}
+      renderActivityMessages={activityRenderers}
     >
       <DocsTools />
       <main className="flex h-full flex-col">

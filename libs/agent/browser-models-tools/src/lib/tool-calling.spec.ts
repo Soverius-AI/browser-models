@@ -198,7 +198,7 @@ describe('AgentRun', () => {
       .map(({ content }) => content)
       .join('\n');
     expect(system).toContain(
-      '```tool_call\n{"name":"getWeather","arguments":{',
+      '```tool_call\n{"name": "getWeather", "arguments": {',
     );
     expect(system).not.toContain('<tool name>');
   });
@@ -230,7 +230,7 @@ describe('AgentRun', () => {
       .map(({ content }) => content)
       .join('\n');
     expect(system).toContain(
-      '```tool_call\n{"name":"getWeather","arguments":{"city":"…"}}\n```',
+      '```tool_call\n{"name": "getWeather", "arguments": {"city": "…"}}\n```',
     );
   });
 

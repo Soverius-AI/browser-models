@@ -83,6 +83,7 @@ export class ToolCallRepair {
   readPartial(
     raw: string,
   ): { readonly name: string; readonly argumentsJson: string } | undefined {
+    raw = asEnvelope(raw, false) ?? raw;
     // Well-formed JSON is closed exactly. JSON that needs repair (single quotes, bare keys) is
     // read with jsonrepair, which has to guess: the arguments are then only a likely preview.
     const closed = closeJson(raw);
@@ -110,8 +111,11 @@ export class ToolCallRepair {
     };
   }
 
-  async #tryRepair(raw: string): Promise<RepairResult> {
+  async #tryRepair(written: string): Promise<RepairResult> {
     const steps: RepairStep[] = [];
+    const envelope = asEnvelope(written, true);
+    if (envelope !== undefined) steps.push('json');
+    const raw = envelope ?? written;
     const call = readCall(parseJson(raw, steps));
     if (!call) {
       return {
@@ -186,6 +190,20 @@ function certainStart(json: string, raw: string): string {
       open.lastIndexOf('[') + 1,
     ),
   );
+}
+
+/**
+ * A call written as the tool's name, then its arguments: `name` on a line and the arguments
+ * object below it, or `name({...})`. Small models write this instead of the
+ * `{"name", "arguments"}` object. Returns it as that object, or undefined for any other text.
+ * `complete`: the call is finished, so the object is closed too.
+ */
+function asEnvelope(raw: string, complete: boolean): string | undefined {
+  const match = /^\s*([A-Za-z_][\w.:-]*)\s*(\(?)\s*(\{[\s\S]*)$/.exec(raw);
+  if (!match) return undefined;
+  const [, name = '', parenthesized, rest = ''] = match;
+  const args = parenthesized ? rest.replace(/\)\s*$/, '') : rest;
+  return `{"name": ${JSON.stringify(name)}, "arguments": ${args}${complete ? '}' : ''}`;
 }
 
 /** The call in `value`, when it is an object with a name. */
