@@ -22,18 +22,24 @@ Register a frontend tool and give it a component. The component gets the argumen
 | Vue       | `useFrontendTool({ …, render })`         | [Vue](../frameworks/vue.md#streaming-tool-calls)         |
 
 ```tsx
-useFrontendTool(
-  {
-    name: 'getWeather',
-    description: 'Get the weather for a city',
-    parameters: z.object({ city: z.string() }),
-    handler: async ({ city }) => ({ city, temperature: 21 }),
-    render: ({ args, status }) => (
-      <div data-status={status}>Weather in {args.city ?? '…'}</div>
-    ),
-  },
-  [],
-);
+import { useFrontendTool } from '@copilotkit/react-core/v2';
+import { z } from 'zod';
+
+export function Weather() {
+  useFrontendTool(
+    {
+      name: 'getWeather',
+      description: 'Get the weather for a city',
+      parameters: z.object({ city: z.string() }),
+      handler: async ({ city }) => ({ city, temperature: 21 }),
+      render: ({ args, status }) => (
+        <div data-status={status}>Weather in {args.city ?? '…'}</div>
+      ),
+    },
+    [],
+  );
+  return null;
+}
 ```
 
 The agent needs `tools: new ToolCalling()` (the client's tools come with every run); CopilotKit runs the tool and starts the follow-up run.
@@ -64,18 +70,24 @@ agent.use(new OpenGenerativeUi());
 Set `openGenerativeUI` on the provider. It registers the `generateSandboxedUi` tool, its design guidelines for the model, and the sandbox renderer.
 
 ```ts
-// Angular
+// Angular, app.config.ts
+import { provideCopilotKit } from '@copilotkit/angular';
+
 provideCopilotKit({ agents: { default: agent }, openGenerativeUI: {} });
 ```
 
 ```tsx
 // React
-<CopilotKitProvider
-  agents__unsafe_dev_only={{ default: agent }}
-  openGenerativeUI={{}}
->
-  <CopilotChat />
-</CopilotKitProvider>
+import { CopilotChat, CopilotKitProvider } from '@copilotkit/react-core/v2';
+
+export const App = () => (
+  <CopilotKitProvider
+    agents__unsafe_dev_only={{ default: agent }}
+    openGenerativeUI={{}}
+  >
+    <CopilotChat />
+  </CopilotKitProvider>
+);
 ```
 
 ```vue

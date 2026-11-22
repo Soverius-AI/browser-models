@@ -1,4 +1,4 @@
-import { OutputParser, type OutputPart } from './parser.ts';
+import { OutputParser, type OutputPart } from './output-parser.ts';
 
 /** Feeds the text in small random-sized pieces, like a real stream. */
 function parseInChunks(text: string, seed: number): OutputPart[] {

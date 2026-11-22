@@ -2,6 +2,7 @@ import {
   OutputParser,
   type ChatMessage,
   type Engine,
+  type JsonSchema,
   type OutputPart,
 } from '@soverius-ai/browser-models';
 import type {
@@ -187,9 +188,16 @@ class ActiveTools implements RunTools {
           `- ${tool.name}: ${tool.description}\n  arguments (JSON Schema): ${JSON.stringify(tool.parameters ?? { type: 'object' })}`,
       )
       .join('\n');
+    // A real call, not a template: small models copy a placeholder like "<tool name>" as it is.
+    const [first] = tools;
+    const example = JSON.stringify({
+      name: first?.name ?? 'toolName',
+      arguments: ActiveTools.#exampleArguments(first?.parameters),
+    });
     return [
       'You can call tools. To call one, reply with a block like this and nothing after it:',
-      '```tool_call\n{"name": "<tool name>", "arguments": { ... }}\n```',
+      '```tool_call\n' + example + '\n```',
+      'Use the exact name of one of the available tools below, and arguments that match its schema.',
       'Tool results come back in a ```tool_result block. Only call a tool when you need it.',
       'After a tool result, answer the user in plain words. Never write a tool_result block yourself.',
       'If a tool result is an error, do not give up: fix the arguments or call the tool that provides what is missing, then try again.',
@@ -197,4 +205,30 @@ class ActiveTools implements RunTools {
       list,
     ].join('\n');
   }
+
+  /** Example arguments for a tool's schema: a value of the right type for each property. */
+  static #exampleArguments(
+    schema: JsonSchema | undefined,
+  ): Record<string, unknown> {
+    const properties = (schema?.['properties'] ?? {}) as Record<
+      string,
+      { readonly type?: unknown; readonly enum?: readonly unknown[] }
+    >;
+    return Object.fromEntries(
+      Object.entries(properties).map(([key, property]) => [
+        key,
+        property.enum?.[0] ?? EXAMPLE_VALUES[String(property.type)] ?? '…',
+      ]),
+    );
+  }
 }
+
+/** A value of each JSON Schema type, for the example call in the instructions. */
+const EXAMPLE_VALUES: Readonly<Record<string, unknown>> = {
+  string: '…',
+  number: 1,
+  integer: 1,
+  boolean: true,
+  array: [],
+  object: {},
+};

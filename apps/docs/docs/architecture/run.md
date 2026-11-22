@@ -15,10 +15,12 @@ sequenceDiagram
   A-->>C: RUN_STARTED
   A->>T: start(run)
   T-->>A: tools, instructions (tool sources read)
+  A-->>C: CUSTOM soverius.tool_source_error (a source failed)
   A->>E: load()
   A-->>C: ACTIVITY_SNAPSHOT soverius.model (only while loading)
   loop up to maxSteps model calls (one without ToolCalling)
     A->>K: compact(prompt, last call's token count)
+    A-->>C: CUSTOM soverius.compaction (only when it compacts)
     K-->>A: prompt that fits the context
     A->>E: generate(prompt)
     E-->>A: text parts, then finish (reason, tokens)
@@ -26,6 +28,7 @@ sequenceDiagram
     A-->>C: TOOL_CALL_START · TOOL_CALL_ARGS (while the model writes)
     A->>T: check(complete call)
     T-->>A: valid call and repair steps
+    A-->>C: CUSTOM soverius.tool_repair (when it was repaired)
     A-->>C: rest of TOOL_CALL_ARGS or MESSAGES_SNAPSHOT, then TOOL_CALL_END
     A-->>C: TOOL_CALL_RESULT (tools of the agent only)
   end

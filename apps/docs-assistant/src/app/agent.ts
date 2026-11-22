@@ -22,10 +22,6 @@ const engines = {
   gemma: new WebLlmEngine('gemma-4-E2B-it-q4f16_1-MLC', {
     contextWindowSize: 16384,
     sampling: 'predictable',
-    worker: () =>
-      new Worker(new URL('./web-llm.worker.ts', import.meta.url), {
-        type: 'module',
-      }),
   }),
   demo: demoEngine(),
 };

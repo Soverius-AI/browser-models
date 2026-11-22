@@ -125,7 +125,7 @@ export class ToolCallRepair {
       const names = this.#tools.map((t) => t.name).join(', ');
       return {
         ok: false,
-        error: `Unknown tool "${call.name}". Available tools: ${names}.`,
+        error: `Unknown tool "${call.name}". Call it again with the exact name of one of these tools: ${names}.`,
       };
     }
     if (tool.name !== call.name) steps.push('name');
@@ -252,10 +252,15 @@ function findTool(
   return close.length === 1 ? close[0] : undefined;
 }
 
-/** "functions.getWeather", "get-weather" and "GET_WEATHER" all become "getweather". */
+/**
+ * "functions.getWeather", "default_api.getWeather" (Gemini), "getWeather()", "get-weather" and
+ * "GET_WEATHER" all become "getweather".
+ */
 function normalize(name: string): string {
   return name
-    .replace(/^functions\./, '')
+    .trim()
+    .replace(/\(.*$/s, '')
+    .replace(/^.*\./, '')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
 }

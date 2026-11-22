@@ -6,21 +6,20 @@
   "tags": ["scope:agent", "type:agent"],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/libs/agent/browser-models-agui"],
+      "inputs": [
+        "production",
+        "^production",
+        {
+          "externalDependencies": ["esbuild", "typescript"]
+        },
+        "{workspaceRoot}/tools/library-build.ts"
+      ],
       "options": {
-        "outputPath": "dist/libs/agent/browser-models-agui",
-        "main": "libs/agent/browser-models-agui/src/index.ts",
-        "tsConfig": "libs/agent/browser-models-agui/tsconfig.lib.json",
-        "assets": [
-          "libs/agent/browser-models-agui/*.md",
-          {
-            "input": ".",
-            "glob": "LICENSE",
-            "output": "."
-          }
-        ]
-      }
+        "command": "node tools/library-build.ts libs/agent/browser-models-agui dist/libs/agent/browser-models-agui"
+      },
+      "dependsOn": ["^build"]
     },
     "nx-release-publish": {
       "options": {

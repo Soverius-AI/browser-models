@@ -22,16 +22,17 @@ type WebLlmLibrary = typeof import('@mlc-ai/web-llm');
 
 export interface WebLlmOptions extends ModelSettings {
   /**
-   * Creates the Web Worker the model runs in, so the page stays responsive. Called once per
-   * load; `unload()` and `delete()` terminate the worker. The worker file calls
-   * `startWebLlmWorker()` from `@soverius-ai/browser-models/web-llm/worker`.
+   * Where the model runs. Default: a Web Worker of this package, so the page stays responsive.
+   * `false` runs it on the main thread. A function creates your own worker, whose file calls
+   * `startWebLlmWorker()` from `@soverius-ai/browser-models/web-llm/worker`. The worker is
+   * created once per load; `unload()` and `delete()` terminate it.
    */
-  readonly worker?: () => Worker;
+  readonly worker?: false | (() => Worker);
   /** WebLLM app config, for example `{ ...prebuiltAppConfig, cacheBackend: 'opfs' }`. */
   readonly appConfig?: AppConfig;
   /**
-   * Default: what the model was built with, 4096 for nearly every prebuilt WebLLM model (1024
-   * for the smallest). A call that needs more fails with WebLLM's
+   * Default: what the model was built with: 4096 for most prebuilt WebLLM models, 2048 or 1024
+   * for small ones. A call that needs more fails with WebLLM's
    * `ContextWindowSizeExceededError`. A larger window needs more GPU memory.
    */
   readonly contextWindowSize?: number;
@@ -185,7 +186,8 @@ export class WebLlmEngine implements Engine {
       initProgressCallback: (report: { progress: number }) =>
         onProgress(report.progress),
     };
-    const worker = this.#options.worker?.();
+    const { worker: createWorker = packageWorker } = this.#options;
+    const worker = createWorker === false ? undefined : createWorker();
     const loaded: Loaded = {
       worker,
       mlc: worker
@@ -233,6 +235,16 @@ export class WebLlmEngine implements Engine {
     });
     return this.#library;
   }
+}
+
+/**
+ * The worker of this package. `new Worker(new URL(…, import.meta.url))` in one expression is
+ * the form Vite, webpack, esbuild (Angular) and Parcel find and bundle as a worker.
+ */
+function packageWorker(): Worker {
+  return new Worker(new URL('./web-llm-default.worker.js', import.meta.url), {
+    type: 'module',
+  });
 }
 
 async function free({ mlc, worker }: Loaded): Promise<void> {

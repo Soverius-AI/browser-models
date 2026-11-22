@@ -126,7 +126,9 @@ export class BrowserModelsAgent<
   }
 
   /** Runs the agent on the selected model, or the one `forwardedProps.soverius.model` picks. */
-  override run(input: RunAgentInput): Observable<BaseEvent> {
+  // Typed through the base class, so the declarations name no rxjs of their own: a second
+  // rxjs copy in an app cannot make the agent unassignable to AbstractAgent.
+  override run(input: RunAgentInput): ReturnType<AbstractAgent['run']> {
     return new Observable<BaseEvent>((subscriber) => {
       const abort = new AbortController();
       this.abortController = abort;

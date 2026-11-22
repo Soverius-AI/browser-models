@@ -14,71 +14,24 @@ const agent = new BrowserModelsAgent({
   models: { nano: new PromptApiEngine() },
   defaultModel: 'nano',
 });
+const thinking = document.body.appendChild(document.createElement('details'));
+const answer = document.body.appendChild(document.createElement('p'));
 
 agent.addMessage({ id: crypto.randomUUID(), role: 'user', content: 'Hello' });
 await agent.runAgent(
   {},
   {
-    onReasoningMessageContentEvent: ({ event }) => showThinking(event.delta),
-    onTextMessageContentEvent: ({ event }) => showAnswer(event.delta),
-    onRunErrorEvent: ({ event }) => showError(event.message),
+    onReasoningMessageContentEvent: ({ event }) =>
+      void thinking.append(event.delta),
+    onTextMessageContentEvent: ({ event }) => void answer.append(event.delta),
+    onRunErrorEvent: ({ event }) => void (answer.textContent = event.message),
   },
 );
 ```
 
 The agent keeps the conversation in `agent.messages`; every `runAgent()` continues it.
 
-## Frontend tools
-
-The page declares its tools in `RunAgentInput.tools`, runs the calls, adds the results and runs again. The agent needs `tools: new ToolCalling()` to offer them to the model.
-
-```ts
-import type { Tool, ToolCall } from '@ag-ui/core';
-import { ToolCalling } from '@soverius-ai/browser-models-tools';
-
-const agent = new BrowserModelsAgent({
-  models,
-  defaultModel: 'nano',
-  tools: new ToolCalling(),
-});
-
-const tools: Tool[] = [
-  {
-    name: 'change_background',
-    description: 'Change the page background color.',
-    parameters: {
-      type: 'object',
-      properties: { color: { type: 'string' } },
-      required: ['color'],
-    },
-  },
-];
-
-agent.addMessage({
-  id: crypto.randomUUID(),
-  role: 'user',
-  content: 'Make it blue',
-});
-for (let round = 0; round < 3; round++) {
-  const { newMessages } = await agent.runAgent({ tools });
-  const calls: ToolCall[] = newMessages.flatMap((message) =>
-    message.role === 'assistant' ? (message.toolCalls ?? []) : [],
-  );
-  if (calls.length === 0) break;
-  for (const call of calls) {
-    const { color } = JSON.parse(call.function.arguments) as { color: string };
-    document.body.style.background = color;
-    agent.addMessage({
-      id: crypto.randomUUID(),
-      role: 'tool',
-      toolCallId: call.id,
-      content: `Background set to ${color}`,
-    });
-  }
-}
-```
-
-Tools of the agent (`localTools`) already ran inside the run; only the page's own tools come back here.
+Frontend tools (the page runs the calls) need `ToolCalling`: [ToolCalling → Frontend tools without CopilotKit](../tools/index.md#frontend-tools-without-copilotkit).
 
 ## Model state
 
@@ -86,8 +39,14 @@ Tools of the agent (`localTools`) already ran inside the run; only the page's ow
 import { ModelStore } from '@soverius-ai/browser-models';
 
 const store = new ModelStore(agent);
-store.subscribe(() => (status.textContent = store.getState().availability));
-downloadButton.onclick = () => store.download();
+const availability = document.body.appendChild(document.createElement('p'));
+const download = document.body.appendChild(document.createElement('button'));
+
+download.textContent = 'Download';
+download.onclick = () => void store.download();
+store.subscribe(() => {
+  availability.textContent = store.getState().availability;
+});
 ```
 
 See [Model picker & downloads](../engines/models.md).
@@ -99,6 +58,7 @@ See [Model picker & downloads](../engines/models.md).
 ```ts
 import { EventType } from '@ag-ui/core';
 import { AgentRun } from '@soverius-ai/browser-models-agui';
+import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 
 const run = new AgentRun({
   engine: new PromptApiEngine(),

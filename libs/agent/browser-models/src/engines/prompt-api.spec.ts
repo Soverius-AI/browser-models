@@ -1,9 +1,6 @@
 import type { ChatMessage } from '../lib/engine.ts';
-import {
-  FakeModel,
-  collect,
-  describeEngineContract,
-} from './engine-contract.ts';
+import { collect, describeEngineContract } from '../testing/engine-contract.ts';
+import { FakeModel } from '../testing/fake-model.ts';
 import { PromptApiEngine, type LanguageModelApi } from './prompt-api.ts';
 
 /** A stand-in for the browser's LanguageModel that records what it was given. */

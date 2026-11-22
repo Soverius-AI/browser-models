@@ -30,6 +30,22 @@
       "options": {
         "command": "vue-tsc -p tsconfig.lib.json --noEmit && vue-tsc -p tsconfig.spec.json --noEmit"
       }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["^build"],
+      "outputs": ["{workspaceRoot}/dist/libs/frameworks/vue"],
+      "inputs": [
+        "production",
+        "^production",
+        {
+          "externalDependencies": ["esbuild", "typescript"]
+        },
+        "{workspaceRoot}/tools/library-build.ts"
+      ],
+      "options": {
+        "command": "node tools/library-build.ts libs/frameworks/vue dist/libs/frameworks/vue"
+      }
     }
   }
 }

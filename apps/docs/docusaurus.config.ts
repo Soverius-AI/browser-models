@@ -1,5 +1,6 @@
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import sourceFiles from './plugins/source-files';
 
 const site = 'https://soverius.ai';
 const github = 'https://github.com/Soverius-AI/browser-models';
@@ -51,6 +52,7 @@ const config: Config = {
   markdown: { mermaid: true, format: 'detect' },
   themes: ['@docusaurus/theme-mermaid'],
   plugins: [
+    sourceFiles,
     [
       '@docusaurus/plugin-client-redirects',
       {

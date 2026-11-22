@@ -15,10 +15,11 @@ title: Custom Tools
 | `run(call)`                | the result of a tool of the agent; `undefined` for a client tool   |
 
 ```ts
-import type {
-  RunTools,
-  Tools,
-  ToolsRun,
+import {
+  BrowserModelsAgent,
+  type RunTools,
+  type Tools,
+  type ToolsRun,
 } from '@soverius-ai/browser-models-agui';
 
 /** The client's tools only, and calls in strict JSON: no repair, no schema check. */

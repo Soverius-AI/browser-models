@@ -6,6 +6,7 @@ import {
   WebLlmEngine,
   type BrowserEngine,
 } from './engines.ts';
+import type { ModelSettings } from './lib/engine.ts';
 
 describe('Engines', () => {
   it('creates every engine by its kind, with its own options', () => {
@@ -22,6 +23,27 @@ describe('Engines', () => {
     expect(gemma.contextWindowSize).toBe(16384);
     expect(qwen).toBeInstanceOf(TransformersJsEngine);
     expect(qwen.id).toBe('transformers:onnx/qwen');
+  });
+
+  it('takes one settings object for all engines, with options of its own spread over it', () => {
+    const settings: ModelSettings = {
+      contextWindowSize: 16384,
+      maxOutputTokens: 1024,
+      sampling: 'balanced',
+    };
+
+    const nano = new PromptApiEngine(settings);
+    const gemma = new WebLlmEngine('gemma-MLC', settings);
+    const qwen = new TransformersJsEngine('onnx/qwen', {
+      ...settings,
+      contextWindowSize: 8192,
+      device: 'wasm',
+    });
+
+    // The browser sets the Prompt API's context size: it is known from the first answer on.
+    expect(nano.contextWindowSize).toBeUndefined();
+    expect(gemma.contextWindowSize).toBe(16384);
+    expect(qwen.contextWindowSize).toBe(8192);
   });
 
   it('narrows an engine by its kind', () => {

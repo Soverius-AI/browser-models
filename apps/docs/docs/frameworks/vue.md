@@ -76,8 +76,9 @@ const state = useModelStore(models);
 
 ```ts
 import { useDevtools } from '@soverius-ai/browser-models-vue';
+import { agent } from './agent';
 
-useDevtools(agent, import.meta.env.DEV); // in setup()
+useDevtools(agent, import.meta.env.DEV); // in <script setup>
 ```
 
 See [Devtools](../agent/devtools.md).
@@ -87,13 +88,25 @@ See [Devtools](../agent/devtools.md).
 ```vue
 <!-- App.vue -->
 <script setup lang="ts">
+import {
+  CopilotKitProvider,
+  type VueActivityMessageRenderer,
+} from '@copilotkit/vue/v2';
 import { MODEL_ACTIVITY } from '@soverius-ai/browser-models-agui';
+import type { Component } from 'vue';
+import { agent } from './agent';
+import ChatPage from './ChatPage.vue';
+import ModelActivity from './ModelActivity.vue'; // your component, gets `content`
+import { modelActivity } from './model-activity'; // the zod schema
 
+const agents = { default: agent };
 const activityRenderers = [
   {
     activityType: MODEL_ACTIVITY,
-    content: modelActivity, // zod schema of the content
-    render: ModelActivity, // your component, gets `content`
+    // CopilotKit Vue 1.88 types `content` with its own zod 3 copy; a zod 4 schema works.
+    content:
+      modelActivity as unknown as VueActivityMessageRenderer<unknown>['content'],
+    render: ModelActivity as Component,
   },
 ];
 </script>
@@ -108,7 +121,7 @@ const activityRenderers = [
 </template>
 ```
 
-Schema: [Events → Model loading](../agent/events.md#model-loading). Example: `apps/vue-copilotkit` (`ModelActivity.vue`).
+Schema (`model-activity.ts`): [Events → Model loading](../agent/events.md#model-loading). Example: `apps/vue-copilotkit` (`App.vue`, `ModelActivity.vue`).
 
 ## Streaming tool calls
 
@@ -138,13 +151,20 @@ defineProps<{
 ```
 
 ```ts
+// in <script setup> of a component inside CopilotKitProvider
+import { useFrontendTool } from '@copilotkit/vue/v2';
+import type { Component } from 'vue';
+import * as z from 'zod';
+import TripPlanCard from './TripPlanCard.vue';
+
 useFrontendTool({
   name: 'planTrip',
   description: 'Show a trip plan for a city',
   parameters: z.object({ city: z.string(), stops: z.array(z.string()) }),
   handler: async ({ city, stops }) =>
     `Planned ${stops.length} stops in ${city}`,
-  render: TripPlanCard,
+  // The card takes partial `args` in every state; CopilotKit types them complete.
+  render: TripPlanCard as Component,
 });
 ```
 

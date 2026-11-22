@@ -18,9 +18,11 @@ One app per layer, then the full stack. All run with `?model=demo` (a scripted e
 
 ```bash
 pnpm install
-pnpm nx run engine-chat:serve      # http://localhost:4204
-pnpm nx run docs-assistant:serve   # http://localhost:4206
-pnpm nx run-many -t e2e            # all examples, with the demo engine
+pnpm start:engine          # http://localhost:4204
+pnpm start:assistant       # http://localhost:4206
+pnpm start:examples        # all examples at once
+pnpm start:docs            # this site, http://localhost:4400
+pnpm nx run-many -t e2e    # all examples, with the demo engine
 ```
 
 | Demo prompt                     | App             | What happens                                    |

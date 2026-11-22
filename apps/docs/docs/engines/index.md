@@ -1,14 +1,37 @@
 ---
-title: Choose an engine
+title: Engines
 ---
 
-# Choose an engine
+# Engines
 
-Layer 1, `@soverius-ai/browser-models`. No AG-UI, no dependencies.
+Layer 1, `@soverius-ai/browser-models`. No AG-UI, no engine library needed until you use that engine. An engine runs one model: `availability()`, `load()`, `generate()`.
 
 ```bash
 pnpm add @soverius-ai/browser-models
 ```
+
+## A first chat
+
+```ts title="libs/examples/snippets/src/chat.ts"
+import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
+
+// Layer 1: an engine. The model built into the browser: Gemini Nano in Chrome.
+const engine = new PromptApiEngine();
+const output = document.body.appendChild(document.createElement('p'));
+
+if ((await engine.availability()) === 'unavailable') {
+  output.textContent = 'This browser has no Prompt API.';
+} else {
+  for await (const part of engine.generate({
+    messages: [{ role: 'user', content: 'Write a haiku about the browser.' }],
+  }))
+    if (part.type === 'text') output.append(part.text);
+}
+```
+
+`generate()` streams parts: `text`, then one `finish` with the reason and the token counts. Engines keep no history: send the whole conversation every time. More: [Streaming](./streaming.md).
+
+## The engines
 
 | Class                  | Entry           | `kind`                      | `id`                      | JSON output (`supportsConstraint`) | `delete()` |
 | ---------------------- | --------------- | --------------------------- | ------------------------- | ---------------------------------- | ---------- |

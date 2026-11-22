@@ -37,6 +37,24 @@ sequenceDiagram
 ## The tools of the agent
 
 ```ts
+// agent.ts
+import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
+import { WebLlmEngine } from '@soverius-ai/browser-models/web-llm';
+import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
+import { ToolCalling, type LocalTool } from '@soverius-ai/browser-models-tools';
+import { demoEngine } from '@soverius-ai/example-shared';
+
+// `docs`: the DocsIndex of docs-index.ts, built from the bundled Markdown.
+
+const engines = {
+  nano: new PromptApiEngine({ sampling: 'predictable' }),
+  gemma: new WebLlmEngine('gemma-4-E2B-it-q4f16_1-MLC', {
+    contextWindowSize: 16384,
+    sampling: 'predictable',
+  }),
+  demo: demoEngine(),
+};
+
 const searchDocs: LocalTool<{ query: string }> = {
   name: 'searchDocs',
   description:
@@ -49,32 +67,103 @@ const searchDocs: LocalTool<{ query: string }> = {
   execute: async ({ query }) => docs.search(query),
 };
 
+const readDocs: LocalTool<{ id: string }> = {
+  name: 'readDocs',
+  description:
+    'Reads one section of the docs by the id searchDocs returned, when its excerpt is not enough.',
+  parameters: {
+    type: 'object',
+    properties: { id: { type: 'string' } },
+    required: ['id'],
+  },
+  execute: async ({ id }) => {
+    const section = docs.section(id);
+    return section
+      ? {
+          title: section.title,
+          url: section.url,
+          text: section.text.slice(0, 2000),
+        }
+      : { error: `No section "${id}". Use an id from searchDocs.` };
+  },
+};
+
 export const agent = new BrowserModelsAgent({
-  models: { nano, gemma, demo },
+  agentId: 'default',
+  models: engines,
   defaultModel: 'gemma',
   tools: new ToolCalling({ localTools: [searchDocs, readDocs], maxSteps: 6 }),
 });
+
+export const instructions = [
+  'Always call searchDocs first, with the key words of the question.',
+  'Answer only from what the tools returned.',
+  'When one section answers the question, call showDocsPage with its url and title.',
+].join('\n');
 ```
 
 ## The tools of the page
 
 ```tsx
-// The call runs in the agent, but CopilotKit sees it: show what was found.
-useRenderTool({
-  name: 'searchDocs',
-  parameters: z.object({ query: z.string() }),
-  render: ({ parameters, status, result }) => <SearchResults query={parameters.query} hits={…} />,
-}, []);
+// docs-tools.tsx
+import {
+  useAgentContext,
+  useFrontendTool,
+  useRenderTool,
+} from '@copilotkit/react-core/v2';
+import { z } from 'zod';
+import { instructions } from './agent';
 
-// A frontend tool: the model calls it, the page shows a card.
-useFrontendTool({
-  name: 'showDocsPage',
-  description: 'Shows the user a card that opens the docs page answering the question.',
-  parameters: z.object({ url: z.string(), title: z.string() }),
-  handler: async ({ url }) => `Shown ${url}`,
-  render: ({ args }) => <PageCard url={args.url} title={args.title} />,
-}, []);
+export function DocsTools() {
+  useAgentContext({ description: 'How to answer', value: instructions });
+
+  // searchDocs runs in the agent, but CopilotKit sees the call and its result.
+  useRenderTool(
+    {
+      name: 'searchDocs',
+      parameters: z.object({ query: z.string() }),
+      render: ({ parameters, status, result }) =>
+        status === 'complete' ? (
+          <SearchResults hits={JSON.parse(result) as Hit[]} />
+        ) : (
+          <p>Searching the docs for “{parameters.query}”…</p>
+        ),
+    },
+    [],
+  );
+
+  // A frontend tool: the model calls it, the page shows a card.
+  useFrontendTool(
+    {
+      name: 'showDocsPage',
+      description:
+        'Shows the user a card that opens the docs page answering the question.',
+      parameters: z.object({ url: z.string(), title: z.string() }),
+      handler: async ({ url }) => `Shown ${url}`,
+      render: ({ args }) => <a href={args.url}>{args.title ?? '…'}</a>,
+    },
+    [],
+  );
+
+  return null;
+}
+
+type Hit = { id: string; title: string; url: string };
+
+function SearchResults({ hits }: { hits: Hit[] }) {
+  return (
+    <ul>
+      {hits.map((hit) => (
+        <li key={hit.id}>
+          <a href={hit.url}>{hit.title}</a>
+        </li>
+      ))}
+    </ul>
+  );
+}
 ```
+
+The app's `docs-tools.tsx` adds source chips and the page card; "Open" goes through `postMessage` to the site.
 
 ## In this site
 

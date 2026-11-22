@@ -11,12 +11,7 @@ import {
 
 // 1. Engines (@soverius-ai/browser-models): the models the user can pick. The list is shared by
 //    the examples, see libs/examples/shared/src/lib/models.ts.
-const engines = createExampleModels(
-  () =>
-    new Worker(new URL('./web-llm.worker', import.meta.url), {
-      type: 'module',
-    }),
-);
+const engines = createExampleModels();
 
 // 2. Tool calling (@soverius-ai/browser-models-tools): a tool of the agent, the page's WebMCP
 //    tools, and Context7 over MCP (off unless the page is opened with `?mcp=context7`). The

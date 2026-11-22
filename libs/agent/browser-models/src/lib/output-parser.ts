@@ -29,6 +29,10 @@ type Block = (typeof BLOCKS)[number];
 /**
  * Splits streamed model output into text, thinking and tool calls. Text is passed on as
  * soon as it cannot be the start of a block, so block syntax never shows up in the chat.
+ *
+ * The agent reads every reply with it (thinking → `REASONING_*`, tool calls → `TOOL_CALL_*`),
+ * and so do the compaction and tool calling, to keep thinking out of summaries and arguments.
+ * It is in the core so a chat without AG-UI can split thinking from the answer too.
  */
 export class OutputParser {
   #buffer = '';

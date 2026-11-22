@@ -63,13 +63,30 @@ describe('ToolCallRepair', () => {
     });
   });
 
+  it.each([
+    'functions.getWeather',
+    'default_api.getWeather',
+    'getWeather()',
+    ' getWeather ',
+  ])('finds the tool written as %s', async (name) => {
+    const result = await new ToolCallRepair(tools).repair(
+      JSON.stringify({ name, arguments: { city: 'Vienna' } }),
+    );
+    expect(result).toEqual({
+      ok: true,
+      call: { name: 'getWeather', arguments: { city: 'Vienna' } },
+      steps: ['name'],
+    });
+  });
+
   it('explains unknown tools', async () => {
     const result = await new ToolCallRepair(tools).repair(
       '{"name":"sendEmail","arguments":{}}',
     );
     expect(result).toEqual({
       ok: false,
-      error: 'Unknown tool "sendEmail". Available tools: getWeather.',
+      error:
+        'Unknown tool "sendEmail". Call it again with the exact name of one of these tools: getWeather.',
     });
   });
 });

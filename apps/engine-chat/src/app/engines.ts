@@ -12,11 +12,6 @@ export const engines = {
   gemma: new WebLlmEngine('gemma-4-E2B-it-q4f16_1-MLC', {
     contextWindowSize: 16384,
     sampling: 'balanced',
-    // WebLLM runs in a worker, so the page stays responsive while it writes.
-    worker: () =>
-      new Worker(new URL('./web-llm.worker.ts', import.meta.url), {
-        type: 'module',
-      }),
   }),
   qwen: new TransformersJsEngine('onnx-community/Qwen3-0.6B-ONNX', {
     maxOutputTokens: 1024,

@@ -1,11 +1,26 @@
 import { EngineKind } from '../lib/engine.ts';
-import { describeEngineContract, FakeModel } from './engine-contract.ts';
+import { describeEngineContract } from '../testing/engine-contract.ts';
+import { FakeModel } from '../testing/fake-model.ts';
 import { WebLlmEngine } from './web-llm.ts';
 
 const model = new FakeModel();
 const requests: Record<string, unknown>[] = [];
 const reloads: unknown[][] = [];
 const terminated = vi.fn();
+/** Which WebLLM class each load created: `main` (MLCEngine) or `worker` (WebWorkerMLCEngine). */
+const created: string[] = [];
+
+/** jsdom has no Worker: records how the engine creates its default worker. */
+class FakeWorker {
+  static readonly started: { url: string; options: WorkerOptions }[] = [];
+  constructor(url: URL, options: WorkerOptions) {
+    FakeWorker.started.push({ url: url.href, options });
+  }
+  terminate(): void {
+    terminated();
+  }
+}
+vi.stubGlobal('Worker', FakeWorker);
 
 vi.mock('@mlc-ai/web-llm', () => {
   /** Stands in for both MLCEngine and WebWorkerMLCEngine. */
@@ -16,6 +31,7 @@ vi.mock('@mlc-ai/web-llm', () => {
 
     /** `(config)` for MLCEngine, `(worker, config)` for WebWorkerMLCEngine. */
     constructor(...args: unknown[]) {
+      created.push(args.length === 2 ? 'worker' : 'main');
       const config = args.at(-1) as {
         initProgressCallback: (report: { progress: number }) => void;
       };
@@ -70,7 +86,7 @@ vi.mock('@mlc-ai/web-llm', () => {
   }
   return {
     MLCEngine,
-    WebWorkerMLCEngine: MLCEngine,
+    WebWorkerMLCEngine: class extends MLCEngine {},
     prebuiltAppConfig: {
       model_list: [
         { model_id: 'Small-MLC', overrides: { context_window_size: 4096 } },
@@ -96,6 +112,30 @@ describe('WebLlmEngine', () => {
     requests.length = 0;
     reloads.length = 0;
     terminated.mockClear();
+    created.length = 0;
+    FakeWorker.started.length = 0;
+  });
+
+  it("runs the model in the package's worker by default", async () => {
+    const engine = new WebLlmEngine('Any-MLC');
+    await engine.load();
+
+    expect(created).toEqual(['worker']);
+    expect(FakeWorker.started).toEqual([
+      {
+        url: expect.stringMatching(/\/web-llm-default\.worker\.js$/),
+        options: { type: 'module' },
+      },
+    ]);
+    await engine.unload();
+    expect(terminated).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs the model on the main thread with worker: false', async () => {
+    await new WebLlmEngine('Any-MLC', { worker: false }).load();
+
+    expect(created).toEqual(['main']);
+    expect(FakeWorker.started).toEqual([]);
   });
 
   it('is the WebLLM kind', () => {

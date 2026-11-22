@@ -8,7 +8,9 @@ title: Streaming
 
 ```ts
 import type { ChatMessage } from '@soverius-ai/browser-models';
+import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 
+const engine = new PromptApiEngine();
 const history: ChatMessage[] = [{ role: 'user', content: 'Hello' }];
 let answer = '';
 for await (const part of engine.generate({ messages: history })) {
@@ -29,29 +31,52 @@ history.push({ role: 'assistant', content: answer });
 Models like Qwen3 think in `<think>` tags. `OutputParser` splits that from the answer while the text streams.
 
 ```ts
-import { OutputParser } from '@soverius-ai/browser-models';
+import { OutputParser, type OutputPart } from '@soverius-ai/browser-models';
+import { TransformersJsEngine } from '@soverius-ai/browser-models/transformers';
 
-const parser = new OutputParser();
-for await (const part of engine.generate({ messages: history })) {
-  if (part.type !== 'text') continue;
-  for (const piece of parser.push(part.text)) {
-    if (piece.kind === 'reasoning') showThinking(piece.text);
-    if (piece.kind === 'text') showAnswer(piece.text);
+const engine = new TransformersJsEngine('onnx-community/Qwen3-0.6B-ONNX');
+const thinking = document.body.appendChild(document.createElement('details'));
+const answer = document.body.appendChild(document.createElement('p'));
+
+function show(pieces: readonly OutputPart[]): void {
+  for (const piece of pieces) {
+    if (piece.kind === 'reasoning') thinking.append(piece.text);
+    if (piece.kind === 'text') answer.append(piece.text);
   }
 }
-parser.end();
+
+const parser = new OutputParser();
+for await (const part of engine.generate({
+  messages: [{ role: 'user', content: 'Why is the sky blue?' }],
+})) {
+  if (part.type === 'text') show(parser.push(part.text));
+}
+show(parser.end()); // the text held back at the end
 ```
+
+| `OutputPart.kind`                                 | When                                                            |
+| ------------------------------------------------- | --------------------------------------------------------------- |
+| `text`                                            | answer text                                                     |
+| `reasoning`, `reasoning-end`                      | inside `<think>`, then the block closed                         |
+| `tool-call-partial`, `tool-call`, `tool-call-cut` | a ` ```tool_call ` block: growing, complete, cut off by the end |
 
 ## Stop
 
 ```ts
+import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
+
+const engine = new PromptApiEngine();
+const button = document.body.appendChild(document.createElement('button'));
+button.textContent = 'Stop';
+
 const stop = new AbortController();
 button.onclick = () => stop.abort();
 for await (const part of engine.generate({
-  messages: history,
+  messages: [{ role: 'user', content: 'Tell a long story.' }],
   signal: stop.signal,
 })) {
   // generate() throws an AbortError when stopped
+  if (part.type === 'text') document.body.append(part.text);
 }
 ```
 

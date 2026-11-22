@@ -1,29 +1,20 @@
 import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
 
+// Building blocks first, layer by layer, each layer only using the ones before it. How the
+// pieces work inside comes after.
 const sidebars: SidebarsConfig = {
   docs: [
     'intro',
     {
       type: 'category',
-      label: 'Architecture',
-      link: { type: 'doc', id: 'architecture/index' },
-      items: [
-        'architecture/run',
-        'architecture/tool-calls',
-        'architecture/context',
-        'architecture/model-lifecycle',
-      ],
-    },
-    {
-      type: 'category',
       label: '1 · Engines',
       link: { type: 'doc', id: 'engines/index' },
       items: [
+        'engines/streaming',
         'engines/prompt-api',
         'engines/web-llm',
         'engines/transformers',
         'engines/settings',
-        'engines/streaming',
         'engines/models',
         'engines/custom',
       ],
@@ -34,8 +25,8 @@ const sidebars: SidebarsConfig = {
       link: { type: 'doc', id: 'agent/index' },
       items: [
         'agent/events',
-        'agent/compaction',
         'agent/without-copilotkit',
+        'agent/compaction',
         'agent/devtools',
       ],
     },
@@ -44,10 +35,10 @@ const sidebars: SidebarsConfig = {
       label: '3 · Tools',
       link: { type: 'doc', id: 'tools/index' },
       items: [
-        'tools/repair',
         'tools/mcp',
         'tools/generative-ui',
         'tools/custom',
+        'tools/repair',
       ],
     },
     {
@@ -60,6 +51,17 @@ const sidebars: SidebarsConfig = {
       label: 'Examples',
       link: { type: 'doc', id: 'examples/index' },
       items: ['examples/docs-assistant'],
+    },
+    {
+      type: 'category',
+      label: 'How it works',
+      link: { type: 'doc', id: 'architecture/index' },
+      items: [
+        'architecture/run',
+        'architecture/tool-calls',
+        'architecture/context',
+        'architecture/model-lifecycle',
+      ],
     },
     {
       type: 'category',

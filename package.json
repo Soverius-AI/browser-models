@@ -3,7 +3,17 @@
   "version": "0.0.0",
   "license": "MIT",
   "type": "module",
-  "scripts": {},
+  "scripts": {
+    "start:docs": "nx run docs:serve",
+    "start:engine": "nx run engine-chat:serve",
+    "start:agent": "nx run agent-chat:serve",
+    "start:assistant": "nx run docs-assistant:serve",
+    "start:vanilla": "nx run vanilla-agui:serve",
+    "start:angular": "nx run angular-copilotkit:serve",
+    "start:react": "nx run react-copilotkit:serve",
+    "start:vue": "nx run vue-copilotkit:serve",
+    "start:examples": "nx run-many -t serve -p engine-chat agent-chat docs-assistant vanilla-agui angular-copilotkit react-copilotkit vue-copilotkit --parallel=7"
+  },
   "private": true,
   "devDependencies": {
     "@angular-devkit/core": "~22.2.0",
@@ -54,6 +64,7 @@
     "angular-eslint": "^22.5.0",
     "autoprefixer": "^10.4.0",
     "daisyui": "5.7.50",
+    "esbuild": "0.28.2",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-import": "2.31.0",
@@ -79,8 +90,6 @@
     "typescript-eslint": "^8.58.0",
     "verdaccio": "^6.3.2",
     "vite": "^8.0.0",
-    "vite-plugin-dts": "~4.5.0",
-    "vite-plugin-static-copy": "^3.3.0",
     "vitest": "~4.1.12",
     "vue-tsc": "^2.2.8"
   },

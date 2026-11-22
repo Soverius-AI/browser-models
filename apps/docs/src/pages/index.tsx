@@ -1,6 +1,8 @@
 import Link from '@docusaurus/Link';
-import CodeBlock from '@theme/CodeBlock';
 import Layout from '@theme/Layout';
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+import { SourceFile } from '../components/SourceCode';
 import ModelOverview from '../components/ModelOverview';
 import BrowserModelsWordmark from '../components/BrowserModelsWordmark';
 
@@ -60,32 +62,47 @@ const features = [
   },
 ];
 
-const example = `import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
-import { WebLlmEngine } from '@soverius-ai/browser-models/web-llm';
-import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
-import { ToolCalling } from '@soverius-ai/browser-models-tools';
-
-const agent = new BrowserModelsAgent({
-  models: {
-    nano: new PromptApiEngine(),
-    qwen: new WebLlmEngine('Qwen3-0.6B-q4f16_1-MLC'),
+/**
+ * One tab per layer, simplest first. The code is read from libs/examples/snippets, where each
+ * file runs in a test against a scripted model: what is shown here runs.
+ */
+const snippets = [
+  {
+    id: 'chat',
+    label: 'Chat',
+    text: 'Layer 1: an engine alone. Streams text from the model built into the browser.',
+    install: 'pnpm add @soverius-ai/browser-models',
+    file: 'libs/examples/snippets/src/chat.ts',
+    playground: 'engine',
   },
-  defaultModel: 'nano',
-  tools: new ToolCalling({
-    localTools: [
-      {
-        name: 'hello',
-        description: 'Log a hello world greeting.',
-        async execute() {
-          console.log('Hello world!');
-        },
-      },
-    ],
-  }),
-});
-
-agent.addMessage({ id: 'user', role: 'user', content: 'Say hello.' });
-await agent.runAgent();`;
+  {
+    id: 'agent',
+    label: 'Agent',
+    text: 'Layer 2: an AG-UI agent on the engine. Any AG-UI client can run it.',
+    install:
+      'pnpm add @soverius-ai/browser-models @soverius-ai/browser-models-agui',
+    file: 'libs/examples/snippets/src/agent.ts',
+    playground: 'agent',
+  },
+  {
+    id: 'tools',
+    label: 'Tools',
+    text: 'Layer 3: tool calling. The agent runs the tool and the model answers from its result.',
+    install:
+      'pnpm add @soverius-ai/browser-models @soverius-ai/browser-models-agui @soverius-ai/browser-models-tools',
+    file: 'libs/examples/snippets/src/tools.ts',
+    playground: 'vanilla',
+  },
+  {
+    id: 'copilotkit',
+    label: 'CopilotKit',
+    text: 'CopilotKit, unmodified, with a frontend tool that runs in the page.',
+    install:
+      'pnpm add @soverius-ai/browser-models @soverius-ai/browser-models-agui @soverius-ai/browser-models-tools @copilotkit/react-core zod',
+    file: 'libs/examples/snippets/src/copilotkit.tsx',
+    playground: 'react',
+  },
+] as const;
 
 export default function Home() {
   return (
@@ -156,8 +173,34 @@ export default function Home() {
         </div>
 
         <section className="code-section">
-          <h2>A browser agent with tools</h2>
-          <CodeBlock language="ts">{example}</CodeBlock>
+          <h2>Start small, add layers</h2>
+          <Tabs groupId="snippet" queryString>
+            {snippets.map((snippet) => (
+              <TabItem
+                key={snippet.id}
+                value={snippet.id}
+                label={snippet.label}
+              >
+                <div className="code-section__tab">
+                  <p>{snippet.text}</p>
+                  <pre className="code-section__install">{snippet.install}</pre>
+                  <SourceFile path={snippet.file} />
+                  <p className="code-section__run">
+                    <Link
+                      className="button button--primary"
+                      to={`/playground?platform=${snippet.playground}`}
+                    >
+                      Run it in the playground
+                    </Link>
+                    <span>
+                      Runs in Chrome with Gemini Nano. Tested in CI against a
+                      scripted model.
+                    </span>
+                  </p>
+                </div>
+              </TabItem>
+            ))}
+          </Tabs>
         </section>
       </main>
 

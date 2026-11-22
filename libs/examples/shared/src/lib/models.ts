@@ -6,14 +6,13 @@ import { demoEngine } from './demo-engine';
 
 /**
  * The models every example offers. The user picks one; nothing is chosen automatically.
- * `webLlmWorker` creates the app's WebLLM worker: `new Worker(new URL(...))` must stay in
- * the app so its bundler (Angular or Vite) can find the worker file.
+ * WebLLM runs in the package's own worker.
  */
-export function createExampleModels(webLlmWorker: () => Worker) {
+export function createExampleModels() {
   // WebLLM models default to 4096 tokens. Tool descriptions, a generated page or documentation
   // from an MCP server need more. `?context=4096` makes it small, to see compaction at work.
   const context = Number(new URLSearchParams(location.search).get('context'));
-  const webLlm = { contextWindowSize: context || 16384, worker: webLlmWorker };
+  const webLlm = { contextWindowSize: context || 16384 };
   return {
     nano: new PromptApiEngine(),
     qwenWebLlm: new WebLlmEngine('Qwen3-0.6B-q4f16_1-MLC', webLlm),

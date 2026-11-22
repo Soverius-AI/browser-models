@@ -2,13 +2,14 @@
   "name": "@soverius-ai/browser-models",
   "version": "0.1.0",
   "type": "module",
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "main": "./index.js",
+  "types": "./index.d.ts",
   "dependencies": {
-    "tslib": "^2.3.0",
     "@types/dom-chromium-ai": "^0.0.18"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./web-llm-default.worker.js"
+  ],
   "license": "MIT",
   "homepage": "https://browser-models.soverius.ai",
   "description": "Run models in the browser: one engine interface for the Prompt API, WebLLM and transformers.js.",
@@ -27,34 +28,34 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "types": "./src/index.d.ts",
-      "import": "./src/index.js",
-      "default": "./src/index.js"
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
     },
     "./prompt-api": {
-      "types": "./src/prompt-api.d.ts",
-      "import": "./src/prompt-api.js",
-      "default": "./src/prompt-api.js"
+      "types": "./prompt-api.d.ts",
+      "import": "./prompt-api.js",
+      "default": "./prompt-api.js"
     },
     "./web-llm": {
-      "types": "./src/web-llm.d.ts",
-      "import": "./src/web-llm.js",
-      "default": "./src/web-llm.js"
+      "types": "./web-llm.d.ts",
+      "import": "./web-llm.js",
+      "default": "./web-llm.js"
     },
     "./web-llm/worker": {
-      "types": "./src/web-llm-worker.d.ts",
-      "import": "./src/web-llm-worker.js",
-      "default": "./src/web-llm-worker.js"
+      "types": "./web-llm-worker.d.ts",
+      "import": "./web-llm-worker.js",
+      "default": "./web-llm-worker.js"
     },
     "./transformers": {
-      "types": "./src/transformers.d.ts",
-      "import": "./src/transformers.js",
-      "default": "./src/transformers.js"
+      "types": "./transformers.d.ts",
+      "import": "./transformers.js",
+      "default": "./transformers.js"
     },
     "./engines": {
-      "types": "./src/engines.d.ts",
-      "import": "./src/engines.js",
-      "default": "./src/engines.js"
+      "types": "./engines.d.ts",
+      "import": "./engines.js",
+      "default": "./engines.js"
     }
   },
   "repository": {

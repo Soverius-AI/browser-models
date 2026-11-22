@@ -12,12 +12,7 @@ import {
 
 // 1. Engines (@soverius-ai/browser-models): the models the user can pick. The list is shared by
 //    the examples, see libs/examples/shared/src/lib/models.ts.
-const engines = createExampleModels(
-  () =>
-    new Worker(new URL('./web-llm.worker.ts', import.meta.url), {
-      type: 'module',
-    }),
-);
+const engines = createExampleModels();
 
 // 2. Tool calling (@soverius-ai/browser-models-tools). The page's own frontend tool comes with
 //    every run, see chat.ts.

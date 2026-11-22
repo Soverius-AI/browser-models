@@ -18,7 +18,10 @@ A long conversation outgrows the model's context. Before every model call the ag
 The approach of the [pi coding agent](https://github.com/badlogic/pi-mono): the newest turns stay word for word, everything older becomes a summary. The sizes are made for small models.
 
 ```ts
-import { SummaryCompaction } from '@soverius-ai/browser-models-agui';
+import {
+  BrowserModelsAgent,
+  SummaryCompaction,
+} from '@soverius-ai/browser-models-agui';
 
 new BrowserModelsAgent({
   models,
@@ -33,6 +36,109 @@ new BrowserModelsAgent({
 | `keepRecent`         | `0.25`  | share of the context the newest turns may take; they stay word for word                                                        |
 | `summarize`          | `true`  | the model writes a summary of the older turns; `false` leaves them out                                                         |
 | `charactersPerToken` | `3`     | for the size estimate until the engine counted a call ([Token counts](#token-counts)); use `1` for Chinese, Japanese or Korean |
+
+## Context size
+
+`SummaryCompaction` reads `engine.contextWindowSize` after `load()`. Nothing is compacted while it is unknown, or below 0 (WebLLM's `-1`: a sliding window, which WebLLM manages itself).
+
+| Engine          | `contextWindowSize`                                                               |
+| --------------- | --------------------------------------------------------------------------------- |
+| WebLLM          | the option, else what the model was built with ([WebLLM](../engines/web-llm.md))  |
+| Prompt API      | from the browser, known after the first answer: the first call is never compacted |
+| transformers.js | only the option: the library has no limit of its own                              |
+| Custom engine   | the optional member `contextWindowSize`                                           |
+
+## Your own algorithm
+
+Implement `Compaction` and pass it to the agent.
+
+```ts
+import type { ChatMessage } from '@soverius-ai/browser-models';
+import type { CompactionRequest } from '@soverius-ai/browser-models-agui';
+
+interface Compaction {
+  compact(request: CompactionRequest): Promise<readonly ChatMessage[]>;
+}
+```
+
+| `request`  | What                                                                           |
+| ---------- | ------------------------------------------------------------------------------ |
+| `threadId` | the thread of the run                                                          |
+| `messages` | what the model would get, see below                                            |
+| `engine`   | the model of the run: `contextWindowSize`, and `generate()` to write a summary |
+| `signal`   | aborts when the run is stopped                                                 |
+| `report`   | sends the [event](#event) `soverius.compaction` with the value you pass        |
+| `lastCall` | the run's last model call: `{ tokens, characters }` the engine counted, if any |
+
+`messages`, in this order:
+
+| Message                              | `role`                | `source`          |
+| ------------------------------------ | --------------------- | ----------------- |
+| the system prompt, if there is one   | `system`              | –                 |
+| the client's conversation            | `user` or `assistant` | the AG-UI message |
+| tool calls and results the run added | `assistant`, `user`   | –                 |
+
+- Tool results have the role `user`. A message of the user has `source.role === 'user'`.
+- `compact()` is called before every model call. Return `request.messages` to change nothing.
+- Every call gets the whole conversation again, also what an earlier call left out. Keep what is expensive to make, for example a summary, by `threadId`.
+- Keep the newest user message and everything after it: it is the turn the model answers.
+- An error fails the run.
+
+```ts
+import {
+  BrowserModelsAgent,
+  type Compaction,
+  type CompactionRequest,
+} from '@soverius-ai/browser-models-agui';
+
+/** The model gets the system prompt and the last three turns. */
+class LastTurns implements Compaction {
+  async compact({ messages }: CompactionRequest) {
+    const turns = messages.flatMap((message, index) =>
+      message.source?.role === 'user' ? [index] : [],
+    );
+    const from = turns.at(-3) ?? 0;
+    return messages.filter(
+      (message, index) => message.role === 'system' || index >= from,
+    );
+  }
+}
+
+new BrowserModelsAgent({
+  models,
+  defaultModel: 'gemma',
+  compaction: new LastTurns(),
+});
+```
+
+## Event
+
+`CUSTOM` `soverius.compaction`. Token counts are estimates.
+
+| `value`                                                                                            | When                                                      |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `{ status: 'summarizing', tokens, contextWindowSize }`                                             | before the model writes the summary                       |
+| `{ status: 'done', tokensBefore, tokensAfter, contextWindowSize, summarized, shortened, dropped }` | after a new cut, and before a model call with cut results |
+
+- `summarized`, `dropped`: messages before a new cut, with and without a summary. A cut that is reused is not reported again.
+- `shortened`: messages with cut tool results. Reported for every model call it happens in.
+
+```ts
+import { AgentEvents } from '@soverius-ai/browser-models-agui';
+
+const hint = document.body.appendChild(document.createElement('p'));
+
+agent.subscribe({
+  onCustomEvent: ({ event }) => {
+    const status = AgentEvents.compaction(event);
+    if (status?.status === 'summarizing')
+      hint.textContent = 'Summarizing the conversation…';
+    if (status?.status === 'done') hint.textContent = '';
+  },
+});
+```
+
+## How it works
 
 ### Steps
 
@@ -93,66 +199,7 @@ The summary goes to the end of the system prompt. A later compaction gets the su
 | real token counts from the provider                             | an estimate from the text length, set to the engine's real counts ([Token counts](#token-counts))    |
 | stored in the session file                                      | in memory, per `SummaryCompaction`                                                                   |
 
-## Your own algorithm
-
-Implement `Compaction` and pass it to the agent.
-
-```ts
-interface Compaction {
-  compact(request: CompactionRequest): Promise<readonly ChatMessage[]>;
-}
-```
-
-| `request`  | What                                                                           |
-| ---------- | ------------------------------------------------------------------------------ |
-| `threadId` | the thread of the run                                                          |
-| `messages` | what the model would get, see below                                            |
-| `engine`   | the model of the run: `contextWindowSize`, and `generate()` to write a summary |
-| `signal`   | aborts when the run is stopped                                                 |
-| `report`   | sends the [event](#event) `soverius.compaction` with the value you pass        |
-| `lastCall` | the run's last model call: `{ tokens, characters }` the engine counted, if any |
-
-`messages`, in this order:
-
-| Message                              | `role`                | `source`          |
-| ------------------------------------ | --------------------- | ----------------- |
-| the system prompt, if there is one   | `system`              | –                 |
-| the client's conversation            | `user` or `assistant` | the AG-UI message |
-| tool calls and results the run added | `assistant`, `user`   | –                 |
-
-- Tool results have the role `user`. A message of the user has `source.role === 'user'`.
-- `compact()` is called before every model call. Return `request.messages` to change nothing.
-- Every call gets the whole conversation again, also what an earlier call left out. Keep what is expensive to make, for example a summary, by `threadId`.
-- Keep the newest user message and everything after it: it is the turn the model answers.
-- An error fails the run.
-
-```ts
-import type {
-  Compaction,
-  CompactionRequest,
-} from '@soverius-ai/browser-models-agui';
-
-/** The model gets the system prompt and the last three turns. */
-class LastTurns implements Compaction {
-  async compact({ messages }: CompactionRequest) {
-    const turns = messages.flatMap((message, index) =>
-      message.source?.role === 'user' ? [index] : [],
-    );
-    const from = turns.at(-3) ?? 0;
-    return messages.filter(
-      (message, index) => message.role === 'system' || index >= from,
-    );
-  }
-}
-
-new BrowserModelsAgent({
-  models,
-  defaultModel: 'gemma',
-  compaction: new LastTurns(),
-});
-```
-
-## Token counts
+### Token counts
 
 The estimate starts at `charactersPerToken` (3). After a model call the engine reports how many tokens prompt and reply took; from then on `SummaryCompaction` divides by what that call measured, per thread. Calls under 64 tokens are not used, and the value stays between 1 and 8.
 
@@ -161,40 +208,5 @@ The estimate starts at `charactersPerToken` (3). After a model call the engine r
 | Prompt API      | `session.contextUsage`                 |
 | WebLLM          | `usage` of the last chunk              |
 | transformers.js | its tokenizer: prompt and reply tokens |
-
-## Context size
-
-`SummaryCompaction` reads `engine.contextWindowSize` after `load()`. Without it nothing is compacted.
-
-| Engine          | `contextWindowSize`                                                              |
-| --------------- | -------------------------------------------------------------------------------- |
-| WebLLM          | the option, else what the model was built with ([WebLLM](../engines/web-llm.md)) |
-| Prompt API      | from the browser, known after the first answer                                   |
-| transformers.js | only the option: the library has no limit of its own                             |
-| Custom engine   | the optional member `contextWindowSize`                                          |
-
-## Event
-
-`CUSTOM` `soverius.compaction`. Token counts are estimates.
-
-| `value`                                                                                            | When                                                      |
-| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `{ status: 'summarizing', tokens, contextWindowSize }`                                             | before the model writes the summary                       |
-| `{ status: 'done', tokensBefore, tokensAfter, contextWindowSize, summarized, shortened, dropped }` | after a new cut, and before a model call with cut results |
-
-- `summarized`, `dropped`: messages before a new cut, with and without a summary. A cut that is reused is not reported again.
-- `shortened`: messages with cut tool results. Reported for every model call it happens in.
-
-```ts
-import { AgentEvents } from '@soverius-ai/browser-models-agui';
-
-agent.subscribe({
-  onCustomEvent: ({ event }) => {
-    const status = AgentEvents.compaction(event);
-    if (status?.status === 'summarizing')
-      showHint('Summarizing the conversation…');
-  },
-});
-```
 
 Try it: the examples take `?context=<tokens>` for the WebLLM models. With `?context=4096` a few questions are enough. The [Playground](/playground)'s "Devtools" switch lists the event.

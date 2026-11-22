@@ -11,6 +11,8 @@ Tool sources for `ToolCalling`'s `localTools`: read at the start of every run.
 ```ts
 import { McpTools } from '@soverius-ai/browser-models-tools/mcp';
 
+let token = ''; // set when the user signs in
+
 new McpTools({
   url: 'https://example.com/mcp',
   namespace: 'docs', // tool names: docs__<name>
@@ -42,6 +44,8 @@ new McpTools({
 [Context7](https://context7.com) serves library docs from a remote MCP server that allows any origin. The API key is optional (higher rate limits). The `headers` function runs on every request, so it always sends the current key.
 
 ```ts
+import { McpTools } from '@soverius-ai/browser-models-tools/mcp';
+
 let apiKey = ''; // from a password input; keep it out of localStorage and URLs
 
 new McpTools({

@@ -4,6 +4,16 @@
   "projectType": "application",
   "sourceRoot": "apps/docs",
   "tags": ["scope:examples", "type:app"],
+  "implicitDependencies": [
+    "example-snippets",
+    "engine-chat",
+    "agent-chat",
+    "vanilla-agui",
+    "angular-copilotkit",
+    "react-copilotkit",
+    "vue-copilotkit",
+    "docs-assistant"
+  ],
   "targets": {
     "serve": {
       "executor": "nx:run-commands",
@@ -45,6 +55,22 @@
         ]
       },
       "dependsOn": ["api"]
+    },
+    "check-code": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/docs/**/*.md",
+        "!{projectRoot}/docs/api/**/*",
+        "{workspaceRoot}/README.md",
+        "{projectRoot}/scripts/**/*",
+        "{workspaceRoot}/tsconfig.base.json",
+        "^production",
+        { "externalDependencies": ["typescript"] }
+      ],
+      "options": {
+        "command": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON apps/docs/scripts/check-code.ts"
+      }
     },
     "api": {
       "executor": "nx:run-commands",

@@ -27,10 +27,10 @@ export type LanguageModelExpectations = Pick<
 export type LanguageModelSession = LanguageModel;
 
 /**
- * The browser sets the context size and the reply length, so only `sampling` of the
- * `ModelSettings` applies.
+ * Takes the same `ModelSettings` as the other engines, so one settings object fits all three.
+ * The browser sets the context size and the reply length: only `sampling` applies here.
  */
-export interface PromptApiOptions extends Pick<ModelSettings, 'sampling'> {
+export interface PromptApiOptions extends ModelSettings {
   /** Languages of the conversation, for example `['en', 'de']`. Default `['en']`. */
   readonly languages?: readonly string[];
   /** The API to use. Defaults to the browser's global `LanguageModel`. */

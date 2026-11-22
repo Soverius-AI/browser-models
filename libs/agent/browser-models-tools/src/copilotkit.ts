@@ -10,7 +10,7 @@ import {
   type BaseEvent,
   type RunAgentInput,
 } from '@ag-ui/client';
-import { concatMap, from, type Observable } from 'rxjs';
+import { concatMap, from } from 'rxjs';
 import { asArray, asObject, asString } from './lib/json.ts';
 import { closeJson } from './lib/partial-json.ts';
 
@@ -67,7 +67,11 @@ function sandboxArguments(written: Record<string, unknown>) {
  */
 export class OpenGenerativeUi extends Middleware {
   /** Passes the agent's events on and adds the `open-generative-ui` activity messages. */
-  run(input: RunAgentInput, next: AbstractAgent): Observable<BaseEvent> {
+  // Typed through the base class: the declarations name no rxjs of their own.
+  run(
+    input: RunAgentInput,
+    next: AbstractAgent,
+  ): ReturnType<Middleware['run']> {
     const calls = new Map<string, SandboxCall>();
     return this.runNext(input, next).pipe(
       concatMap((event) => from(withActivity(event, calls))),

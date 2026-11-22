@@ -2,6 +2,8 @@ import Link from '@docusaurus/Link';
 import { useLocation } from '@docusaurus/router';
 import Layout from '@theme/Layout';
 import { useRef, useState } from 'react';
+import SourceCode from '../components/SourceCode';
+import { SOURCE_FILES } from '../source-files';
 
 const platforms = {
   angular: {
@@ -186,6 +188,8 @@ export default function Playground() {
   );
   const [query, setQuery] = useState('');
   const [devtools, setDevtools] = useState(false);
+  /** The running example, or its code. */
+  const [view, setView] = useState<'demo' | 'code'>('demo');
   const [events, setEvents] = useState<readonly AgentEvent[]>([]);
   const frame = useRef<HTMLIFrameElement>(null);
   /** A prompt to send once the example has reloaded with another query. */
@@ -264,12 +268,32 @@ export default function Playground() {
               <i />
               <i />
               <span>{current.name} example · runs on your device</span>
+              <div className="playground__views" role="tablist">
+                {(['demo', 'code'] as const).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={id === view}
+                    className={`button button--sm ${id === view ? 'button--primary' : 'button--secondary'}`}
+                    onClick={() => setView(id)}
+                  >
+                    {id === 'demo' ? 'Demo' : 'Code'}
+                  </button>
+                ))}
+              </div>
             </div>
+            {view === 'code' && (
+              <div className="playground__code">
+                <SourceCode key={platform} files={SOURCE_FILES[platform]} />
+              </div>
+            )}
             <iframe
               key={platform + query + String(devtools)}
               ref={frame}
               title={`${current.name} example`}
               src={src}
+              hidden={view === 'code'}
               className="playground__frame"
               onLoad={() => {
                 listen();
@@ -278,7 +302,7 @@ export default function Playground() {
                 pending.current = undefined;
               }}
             />
-            {devtools && (
+            {devtools && view === 'demo' && (
               <ol className="playground__events" aria-label="Agent events">
                 {events.length === 0 && <li>Run an example to see events.</li>}
                 {events.map((event) => (
@@ -303,7 +327,10 @@ export default function Playground() {
                         key={prompt}
                         type="button"
                         className="button button--sm button--outline button--primary"
-                        onClick={() => run(example, prompt)}
+                        onClick={() => {
+                          setView('demo');
+                          run(example, prompt);
+                        }}
                       >
                         ▶ {prompt}
                       </button>

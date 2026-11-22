@@ -183,6 +183,26 @@ describe('AgentRun', () => {
     expect(events.at(-1)?.type).toBe(EventType.RUN_FINISHED);
   });
 
+  it('shows the model a real call of an available tool, not a template to copy', async () => {
+    const engine = scriptedEngine('Hi');
+    await collect(
+      run({
+        engine,
+        input: input(),
+        localTools: [{ ...weatherTool, execute: async () => 'sunny' }],
+      }),
+    );
+
+    const system = engine.requests[0]?.messages
+      .filter(({ role }) => role === 'system')
+      .map(({ content }) => content)
+      .join('\n');
+    expect(system).toContain(
+      '```tool_call\n{"name":"getWeather","arguments":{',
+    );
+    expect(system).not.toContain('<tool name>');
+  });
+
   it('repairs a broken call and reports the repair', async () => {
     const broken =
       "```tool_call\n{name: 'get_weather', arguments: {city: 'Vienna'}\n```";

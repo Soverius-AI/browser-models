@@ -1,8 +1,5 @@
-import {
-  FakeModel,
-  collect,
-  describeEngineContract,
-} from './engine-contract.ts';
+import { collect, describeEngineContract } from '../testing/engine-contract.ts';
+import { FakeModel } from '../testing/fake-model.ts';
 import { TransformersJsEngine } from './transformers.ts';
 
 const model = new FakeModel();

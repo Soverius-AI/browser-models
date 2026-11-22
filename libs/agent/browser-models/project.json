@@ -6,21 +6,20 @@
   "tags": ["scope:agent", "type:core"],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/libs/agent/browser-models"],
+      "inputs": [
+        "production",
+        "^production",
+        {
+          "externalDependencies": ["esbuild", "typescript"]
+        },
+        "{workspaceRoot}/tools/library-build.ts"
+      ],
       "options": {
-        "outputPath": "dist/libs/agent/browser-models",
-        "main": "libs/agent/browser-models/src/index.ts",
-        "tsConfig": "libs/agent/browser-models/tsconfig.lib.json",
-        "assets": [
-          "libs/agent/browser-models/*.md",
-          {
-            "input": ".",
-            "glob": "LICENSE",
-            "output": "."
-          }
-        ]
-      }
+        "command": "node tools/library-build.ts libs/agent/browser-models dist/libs/agent/browser-models --entry src/engines/web-llm-default.worker.ts"
+      },
+      "dependsOn": ["^build"]
     },
     "nx-release-publish": {
       "options": {

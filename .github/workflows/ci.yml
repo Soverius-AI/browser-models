@@ -32,4 +32,4 @@ jobs:
       - uses: nrwl/nx-set-shas@v4
 
       - run: pnpm nx format:check
-      - run: pnpm nx affected -t lint test build typecheck publint e2e
+      - run: pnpm nx affected -t lint test build typecheck publint check-code e2e
