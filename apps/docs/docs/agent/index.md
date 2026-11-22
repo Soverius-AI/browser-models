@@ -8,13 +8,18 @@ Layer 2, `@soverius-ai/browser-models-agui`: an AG-UI `AbstractAgent` on the eng
 
 ```bash
 pnpm add @soverius-ai/browser-models @soverius-ai/browser-models-agui
+pnpm add @ag-ui/client zod   # only without CopilotKit
 ```
 
-| Peer            | Range    | Comes from                |
-| --------------- | -------- | ------------------------- |
-| `@ag-ui/client` | `^1.0.0` | CopilotKit, or install it |
-| `@ag-ui/core`   | `^1.0.0` | CopilotKit, or install it |
-| `rxjs`          | `^7.8.0` | `@ag-ui/client`           |
+| Peer            | Range    | Comes from                                                         |
+| --------------- | -------- | ------------------------------------------------------------------ |
+| `@ag-ui/client` | `^1.0.0` | CopilotKit, or install it                                          |
+| `@ag-ui/core`   | `^1.0.0` | `@ag-ui/client`                                                    |
+| `rxjs`          | `^7.8.0` | `@ag-ui/client`; do not install it yourself                        |
+| `zod`           | –        | needed by `@ag-ui/core`, not by this package; CopilotKit brings it |
+
+- Without zod, `@ag-ui/core` fails the build: `"z" is not exported by … zod/v4`.
+- An `rxjs` of your own can be a second copy next to the one `@ag-ui/client` pins.
 
 The agent has to use the same `@ag-ui/client` as the client, or TypeScript rejects it as an `AbstractAgent`. pnpm and npm install peers by themselves; pnpm reuses CopilotKit's copy, npm installs the newest 1.x next to CopilotKit's. With npm, install the version CopilotKit pins:
 

@@ -25,6 +25,7 @@ interface, and as [AG-UI](https://docs.ag-ui.com) agents. CopilotKit or any AG-U
 ```bash
 pnpm add @soverius-ai/browser-models                            # 1 · engines
 pnpm add @soverius-ai/browser-models-agui                       # 2 · AG-UI agent
+pnpm add @ag-ui/client zod                                      # only without CopilotKit
 pnpm add @soverius-ai/browser-models-tools                      # 3 · tool calling
 pnpm add @mlc-ai/web-llm                                        # only for WebLlmEngine
 pnpm add @huggingface/transformers                              # only for TransformersJsEngine
@@ -213,7 +214,7 @@ More: [agent](https://browser-models.soverius.ai/docs/agent) ·
 | `@soverius-ai/browser-models-react`   | `.`               | `useModelStore`, `useDevtools`                                                           | `react`                                            |
 | `@soverius-ai/browser-models-vue`     | `.`               | `useModelStore`, `useDevtools`                                                           | `vue`                                              |
 
-The engine core has no runtime dependencies; WebLLM runs in the package's own Web Worker. `@ag-ui/client`, `@ag-ui/core` (1.x) and `rxjs` are peers: the app's copy, usually CopilotKit's; with npm, install `@ag-ui/client` at the version CopilotKit pins. `jsonrepair` and `@cfworker/json-schema` come with `-tools`. No zod.
+The engine core has no runtime dependencies; WebLLM runs in the package's own Web Worker. `@ag-ui/client`, `@ag-ui/core` (1.x) and `rxjs` are peers: the app's copy, usually CopilotKit's; with npm, install `@ag-ui/client` at the version CopilotKit pins. `jsonrepair` and `@cfworker/json-schema` come with `-tools`. Our packages need no zod, but `@ag-ui/core` does: without CopilotKit, install `@ag-ui/client` and `zod`. Do not install `rxjs` yourself; the copy `@ag-ui/client` brings fills the peer.
 
 | You build                            | Install                                        |
 | ------------------------------------ | ---------------------------------------------- |

@@ -46,6 +46,7 @@ flowchart TB
 ```bash
 pnpm add @soverius-ai/browser-models
 pnpm add @soverius-ai/browser-models-agui                # AG-UI agent
+pnpm add @ag-ui/client zod                               # only without CopilotKit
 pnpm add @soverius-ai/browser-models-tools               # tool calling
 pnpm add @mlc-ai/web-llm                                 # only for WebLlmEngine
 pnpm add @huggingface/transformers                       # only for TransformersJsEngine
