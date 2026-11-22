@@ -1,5 +1,9 @@
 import type { ChatMessage } from '../lib/engine.ts';
-import { describeEngineContract, FakeModel } from './engine-contract.ts';
+import {
+  FakeModel,
+  collect,
+  describeEngineContract,
+} from './engine-contract.ts';
 import { PromptApiEngine, type LanguageModelApi } from './prompt-api.ts';
 
 /** A stand-in for the browser's LanguageModel that records what it was given. */
@@ -10,6 +14,7 @@ function fakeLanguageModel(model = new FakeModel()) {
     expectations: [] as unknown[],
     prompts: [] as LanguageModelPrompt[],
     constraints: [] as unknown[],
+    samplingModes: [] as unknown[],
     destroyed: 0,
   };
   const api: LanguageModelApi = {
@@ -20,6 +25,7 @@ function fakeLanguageModel(model = new FakeModel()) {
     },
     async create(options) {
       calls.initialPrompts.push(options?.initialPrompts);
+      calls.samplingModes.push(options?.samplingMode);
       calls.expectations.push({
         expectedInputs: options?.expectedInputs,
         expectedOutputs: options?.expectedOutputs,
@@ -35,6 +41,7 @@ function fakeLanguageModel(model = new FakeModel()) {
       );
       return {
         contextWindow: 9216,
+        contextUsage: 42,
         promptStreaming(input, promptOptions) {
           calls.prompts.push(input);
           calls.constraints.push(promptOptions?.responseConstraint);
@@ -59,12 +66,6 @@ function fakeLanguageModel(model = new FakeModel()) {
   return { api, calls };
 }
 
-async function collect(stream: AsyncIterable<string>): Promise<string> {
-  let text = '';
-  for await (const chunk of stream) text += chunk;
-  return text;
-}
-
 const contractModel = new FakeModel();
 describeEngineContract(contractModel, () => {
   const { api } = fakeLanguageModel(contractModel);
@@ -73,6 +74,27 @@ describeEngineContract(contractModel, () => {
 });
 
 describe('PromptApiEngine', () => {
+  it('passes the sampling level to the session and reports the tokens it holds', async () => {
+    const { api, calls } = fakeLanguageModel();
+    const engine = new PromptApiEngine({
+      languageModel: api,
+      sampling: 'predictable',
+    });
+    const parts = [];
+    for await (const part of engine.generate({
+      messages: [{ role: 'user', content: 'Hi' }],
+    }))
+      parts.push(part);
+
+    expect(calls.samplingModes).toEqual(['predictable']);
+    expect(parts.at(-1)).toEqual({
+      type: 'finish',
+      reason: 'stop',
+      usage: { totalTokens: 42 },
+    });
+    expect(engine.kind).toBe('prompt-api');
+  });
+
   it('is unavailable when the browser has no Prompt API', async () => {
     expect(await new PromptApiEngine().availability()).toBe('unavailable');
   });
@@ -145,7 +167,7 @@ describe('PromptApiEngine', () => {
     for await (const chunk of engine.generate({
       messages: [{ role: 'user', content: 'Hi' }],
     })) {
-      if (chunk === 'Hel') break;
+      if (chunk.type === 'text' && chunk.text === 'Hel') break;
     }
     expect(calls.destroyed).toBe(1);
   });

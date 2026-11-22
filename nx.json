@@ -82,7 +82,14 @@
     }
   },
   "release": {
-    "projects": ["browser-models", "angular", "react", "vue"],
+    "projects": [
+      "browser-models",
+      "browser-models-agui",
+      "browser-models-tools",
+      "angular",
+      "react",
+      "vue"
+    ],
     "projectsRelationship": "fixed"
   },
   "generators": {

@@ -1,9 +1,10 @@
 import { effectScope } from 'vue';
-import type { Availability, Engine } from '@soverius-ai/browser-models';
 import {
-  BrowserModelsAgent,
   ModelStore,
-} from '@soverius-ai/browser-models/agent';
+  type Availability,
+  type Engine,
+} from '@soverius-ai/browser-models';
+import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 import { useModelStore } from './use-model-store.ts';
 
 function engine(availability: Availability): Engine {
@@ -14,7 +15,7 @@ function engine(availability: Availability): Engine {
     load: async () => undefined,
     unload: async () => undefined,
     async *generate() {
-      yield 'hi';
+      yield { type: 'text' as const, text: 'hi' };
     },
   };
 }

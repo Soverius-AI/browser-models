@@ -4,7 +4,7 @@ name: Release
 #
 # Cut a release:
 #
-#   pnpm nx release version 0.2.0          # sets the version in the four package.json files
+#   pnpm nx release version 0.2.0          # sets the version in the six package.json files
 #   git commit -am "chore(release): 0.2.0"
 #   git tag v0.2.0 && git push origin main v0.2.0
 #
@@ -25,7 +25,7 @@ permissions:
   id-token: write # npm provenance
 
 env:
-  PACKAGES: browser-models angular react vue
+  PACKAGES: browser-models browser-models-agui browser-models-tools angular react vue
 
 jobs:
   release:
@@ -39,7 +39,7 @@ jobs:
       - name: Check the version and the npm token
         run: |
           version=$(node -p "require('./libs/agent/browser-models/package.json').version")
-          for package in libs/agent/browser-models libs/frameworks/angular libs/frameworks/react libs/frameworks/vue; do
+          for package in libs/agent/browser-models libs/agent/browser-models-agui libs/agent/browser-models-tools libs/frameworks/angular libs/frameworks/react libs/frameworks/vue; do
             found=$(node -p "require('./$package/package.json').version")
             if [ "$found" != "$version" ]; then
               echo "::error::$package/package.json is at $found, the others are at $version"

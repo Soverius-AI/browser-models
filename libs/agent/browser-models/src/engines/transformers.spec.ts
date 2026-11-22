@@ -1,4 +1,8 @@
-import { describeEngineContract, FakeModel } from './engine-contract.ts';
+import {
+  FakeModel,
+  collect,
+  describeEngineContract,
+} from './engine-contract.ts';
 import { TransformersJsEngine } from './transformers.ts';
 
 const model = new FakeModel();
@@ -8,10 +12,15 @@ const prompts: unknown[] = [];
 const runs: Record<string, unknown>[] = [];
 
 vi.mock('@huggingface/transformers', () => {
+  /** A tokenizer whose chat template makes three tokens of any prompt. */
+  const tokenizer = () => ({ apply_chat_template: () => [1, 2, 3] });
   class TextStreamer {
     constructor(
       readonly tokenizer: unknown,
-      readonly options: { callback_function: (text: string) => void },
+      readonly options: {
+        callback_function: (text: string) => void;
+        token_callback_function: (tokens: bigint[]) => void;
+      },
     ) {}
   }
   class InterruptableStoppingCriteria {
@@ -36,8 +45,10 @@ vi.mock('@huggingface/transformers', () => {
   async function generate(settings: { streamer: TextStreamer }) {
     const { streamer, ...rest } = settings;
     runs.push(rest);
-    for await (const text of model.reply())
+    for await (const text of model.reply()) {
+      streamer.options.token_callback_function([1n]);
       streamer.options.callback_function(text);
+    }
   }
   return {
     TextStreamer,
@@ -60,7 +71,7 @@ vi.mock('@huggingface/transformers', () => {
         Object.assign(
           (prompt: string) => Promise.resolve({ input_ids: prompt }),
           {
-            tokenizer: {},
+            tokenizer: tokenizer(),
             apply_chat_template: (messages: unknown) => {
               prompts.push(messages);
               return 'PROMPT';
@@ -79,19 +90,13 @@ vi.mock('@huggingface/transformers', () => {
       return Object.assign(
         (_messages: unknown, settings: { streamer: TextStreamer }) =>
           generate(settings),
-        { tokenizer: {}, dispose: async () => model.free() },
+        { tokenizer: tokenizer(), dispose: async () => model.free() },
       );
     },
   };
 });
 
 const messages = [{ role: 'user' as const, content: 'Hi' }];
-
-async function collect(stream: AsyncIterable<string>): Promise<string> {
-  let text = '';
-  for await (const chunk of stream) text += chunk;
-  return text;
-}
 
 beforeEach(() => {
   Object.defineProperty(navigator, 'gpu', { value: {}, configurable: true });
@@ -159,10 +164,11 @@ describe('TransformersJsEngine', () => {
     expect(runs[0]).toMatchObject({ max_new_tokens: 1024, do_sample: false });
   });
 
-  it('passes generation settings to transformers.js', async () => {
+  it('passes the settings and the native generation options to transformers.js', async () => {
     const engine = new TransformersJsEngine('any/model', {
-      maxNewTokens: 256,
-      generation: { do_sample: true, temperature: 0.7 },
+      maxOutputTokens: 256,
+      sampling: 'balanced',
+      native: { top_k: 40, temperature: 0.2, max_new_tokens: 10 },
     });
     await collect(engine.generate({ messages }));
 
@@ -170,7 +176,32 @@ describe('TransformersJsEngine', () => {
       max_new_tokens: 256,
       do_sample: true,
       temperature: 0.7,
+      top_k: 40,
     });
+  });
+
+  it('reports the tokens of the prompt and the reply', async () => {
+    const parts = [];
+    for await (const part of new TransformersJsEngine('any/model').generate({
+      messages,
+    }))
+      parts.push(part);
+
+    expect(parts.at(-1)).toEqual({
+      type: 'finish',
+      reason: 'stop',
+      usage: { totalTokens: 5, promptTokens: 3, outputTokens: 2 },
+    });
+  });
+
+  it('reports a reply that reached maxOutputTokens', async () => {
+    const parts = [];
+    for await (const part of new TransformersJsEngine('any/model', {
+      maxOutputTokens: 2,
+    }).generate({ messages }))
+      parts.push(part);
+
+    expect(parts.at(-1)).toMatchObject({ type: 'finish', reason: 'length' });
   });
 
   it('has no context size unless it is given one', () => {

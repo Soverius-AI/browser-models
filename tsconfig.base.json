@@ -24,8 +24,14 @@
       "@soverius-ai/browser-models-angular": [
         "./libs/frameworks/angular/src/index.ts"
       ],
-      "@soverius-ai/browser-models/agent": [
-        "./libs/agent/browser-models/src/agent.ts"
+      "@soverius-ai/browser-models/engines": [
+        "./libs/agent/browser-models/src/engines.ts"
+      ],
+      "@soverius-ai/browser-models-agui": [
+        "./libs/agent/browser-models-agui/src/index.ts"
+      ],
+      "@soverius-ai/browser-models-tools": [
+        "./libs/agent/browser-models-tools/src/index.ts"
       ],
       "@soverius-ai/browser-models/prompt-api": [
         "./libs/agent/browser-models/src/prompt-api.ts"
@@ -40,14 +46,14 @@
         "./libs/agent/browser-models/src/transformers.ts"
       ],
       "@soverius-ai/example-shared": ["./libs/examples/shared/src/index.ts"],
-      "@soverius-ai/browser-models/webmcp": [
-        "./libs/agent/browser-models/src/webmcp.ts"
+      "@soverius-ai/browser-models-tools/webmcp": [
+        "./libs/agent/browser-models-tools/src/webmcp.ts"
       ],
-      "@soverius-ai/browser-models/mcp": [
-        "./libs/agent/browser-models/src/mcp.ts"
+      "@soverius-ai/browser-models-tools/mcp": [
+        "./libs/agent/browser-models-tools/src/mcp.ts"
       ],
-      "@soverius-ai/browser-models/copilotkit": [
-        "./libs/agent/browser-models/src/copilotkit.ts"
+      "@soverius-ai/browser-models-tools/copilotkit": [
+        "./libs/agent/browser-models-tools/src/copilotkit.ts"
       ]
     },
     "noUncheckedIndexedAccess": true,

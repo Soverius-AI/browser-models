@@ -1,0 +1,15 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "extends": ["../../../typedoc.base.json"],
+  "name": "@soverius-ai/browser-models",
+  "entryPoints": [
+    "src/index.ts",
+    "src/prompt-api.ts",
+    "src/web-llm.ts",
+    "src/web-llm-worker.ts",
+    "src/transformers.ts",
+    "src/engines.ts"
+  ],
+  "tsconfig": "./tsconfig.lib.json",
+  "out": "../../../apps/docs/docs/api/browser-models"
+}

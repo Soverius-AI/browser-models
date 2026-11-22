@@ -10,7 +10,7 @@
       "options": {
         "command": "docusaurus start apps/docs --port 4400"
       },
-      "dependsOn": ["examples"]
+      "dependsOn": ["api", "examples"]
     },
     "build": {
       "executor": "nx:run-commands",
@@ -18,7 +18,7 @@
       "options": {
         "command": "docusaurus build apps/docs --out-dir ../../dist/apps/docs"
       },
-      "dependsOn": ["examples"]
+      "dependsOn": ["api", "examples"]
     },
     "serve-static": {
       "executor": "nx:run-commands",
@@ -38,7 +38,43 @@
           "cp -R dist/docs-examples/angular/browser apps/docs/static/examples/angular",
           "cd apps/react-copilotkit && pnpm exec vite build --base /examples/react/ --outDir ../docs/static/examples/react --emptyOutDir",
           "cd apps/vue-copilotkit && pnpm exec vite build --base /examples/vue/ --outDir ../docs/static/examples/vue --emptyOutDir",
-          "cd apps/vanilla-agui && pnpm exec vite build --base /examples/vanilla/ --outDir ../docs/static/examples/vanilla --emptyOutDir"
+          "cd apps/vanilla-agui && pnpm exec vite build --base /examples/vanilla/ --outDir ../docs/static/examples/vanilla --emptyOutDir",
+          "cd apps/engine-chat && pnpm exec vite build --base /examples/engine/ --outDir ../docs/static/examples/engine --emptyOutDir",
+          "cd apps/agent-chat && pnpm exec vite build --base /examples/agent/ --outDir ../docs/static/examples/agent --emptyOutDir",
+          "cd apps/docs-assistant && pnpm exec vite build --base /examples/assistant/ --outDir ../docs/static/examples/assistant --emptyOutDir"
+        ]
+      },
+      "dependsOn": ["api"]
+    },
+    "api": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{workspaceRoot}/typedoc.base.json",
+        "{workspaceRoot}/libs/agent/browser-models/typedoc.json",
+        "{workspaceRoot}/libs/agent/browser-models-agui/typedoc.json",
+        "{workspaceRoot}/libs/agent/browser-models-tools/typedoc.json",
+        "{workspaceRoot}/libs/frameworks/angular/typedoc.json",
+        "{workspaceRoot}/libs/frameworks/react/typedoc.json",
+        "{workspaceRoot}/libs/frameworks/vue/typedoc.json",
+        "{workspaceRoot}/libs/agent/browser-models/src/**/*.ts",
+        "{workspaceRoot}/libs/agent/browser-models-agui/src/**/*.ts",
+        "{workspaceRoot}/libs/agent/browser-models-tools/src/**/*.ts",
+        "{workspaceRoot}/libs/frameworks/angular/src/**/*.ts",
+        "{workspaceRoot}/libs/frameworks/react/src/**/*.ts",
+        "{workspaceRoot}/libs/frameworks/vue/src/**/*.ts"
+      ],
+      "outputs": ["{projectRoot}/docs/api"],
+      "options": {
+        "parallel": false,
+        "commands": [
+          "rm -rf apps/docs/docs/api",
+          "cd libs/agent/browser-models && typedoc --options typedoc.json",
+          "cd libs/agent/browser-models-agui && typedoc --options typedoc.json",
+          "cd libs/agent/browser-models-tools && typedoc --options typedoc.json",
+          "cd libs/frameworks/angular && typedoc --options typedoc.json",
+          "cd libs/frameworks/react && typedoc --options typedoc.json",
+          "cd libs/frameworks/vue && typedoc --options typedoc.json"
         ]
       }
     }

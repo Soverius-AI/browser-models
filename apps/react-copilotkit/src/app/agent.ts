@@ -1,9 +1,8 @@
-import { OpenGenerativeUi } from '@soverius-ai/browser-models/copilotkit';
-import { WebMcpTools } from '@soverius-ai/browser-models/webmcp';
-import {
-  BrowserModelsAgent,
-  ModelStore,
-} from '@soverius-ai/browser-models/agent';
+import { ModelStore } from '@soverius-ai/browser-models';
+import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
+import { ToolCalling } from '@soverius-ai/browser-models-tools';
+import { OpenGenerativeUi } from '@soverius-ai/browser-models-tools/copilotkit';
+import { WebMcpTools } from '@soverius-ai/browser-models-tools/webmcp';
 import {
   Context7Tools,
   createExampleModels,
@@ -11,25 +10,34 @@ import {
   modelFromUrl,
 } from '@soverius-ai/example-shared';
 
-/** Context7 library docs over remote MCP. Off unless the page is opened with `?mcp=context7`. */
-export const context7 = new Context7Tools();
+// 1. Engines (@soverius-ai/browser-models): the models the user can pick. The list is shared by
+//    the examples, see libs/examples/shared/src/lib/models.ts.
+const engines = createExampleModels(
+  () =>
+    new Worker(new URL('./web-llm.worker.ts', import.meta.url), {
+      type: 'module',
+    }),
+);
 
-/** The in-browser agent. CopilotKit talks to it like to any AG-UI agent. */
-export const agent = new BrowserModelsAgent({
-  agentId: 'default',
-  models: createExampleModels(
-    () =>
-      new Worker(new URL('./web-llm.worker.ts', import.meta.url), {
-        type: 'module',
-      }),
-  ),
-  defaultModel: modelFromUrl(),
+// 2. Tool calling (@soverius-ai/browser-models-tools): a tool of the agent, the page's WebMCP
+//    tools, and Context7 over MCP (off unless the page is opened with `?mcp=context7`). The
+//    tools CopilotKit registers in the page come with every run by themselves.
+export const context7 = new Context7Tools();
+const tools = new ToolCalling({
   localTools: [currentTime, new WebMcpTools(), context7],
 });
 
+// 3. Agent (@soverius-ai/browser-models-agui): CopilotKit talks to it like to any AG-UI agent.
+export const agent = new BrowserModelsAgent({
+  agentId: 'default',
+  models: engines,
+  defaultModel: modelFromUrl(),
+  tools,
+});
 // Open Generative UI: reports the streamed `generateSandboxedUi` tool call as the activity
-// messages CopilotKit renders in a sandboxed iframe (see OpenGenerativeUi).
+// messages CopilotKit renders in a sandboxed iframe.
 agent.use(new OpenGenerativeUi());
 
-/** Model state (availability, downloads, storage) for the UI. */
+// 4. Model state (@soverius-ai/browser-models): availability, downloads and storage, for the
+//    models panel.
 export const models = new ModelStore(agent);

@@ -14,10 +14,11 @@
   "license": "MIT",
   "homepage": "https://browser-models.soverius.ai",
   "type": "module",
-  "description": "Vue composables for @soverius-ai/browser-models: model state and debugger wiring.",
+  "description": "Vue composables for @soverius-ai/browser-models-agui: model state and debugger wiring.",
   "peerDependencies": {
     "vue": "^3.5.0",
-    "@soverius-ai/browser-models": "0.1.0"
+    "@soverius-ai/browser-models": "0.1.0",
+    "@soverius-ai/browser-models-agui": "0.1.0"
   },
   "module": "./index.js",
   "repository": {

@@ -1,9 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import type {
-  BrowserModelsAgent,
-  ModelState,
-  ModelStore,
-} from '@soverius-ai/browser-models/agent';
+import type { ModelState, ModelStore } from '@soverius-ai/browser-models';
+import type { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 
 /**
  * The state of a model store as React state. The component re-renders on every change.

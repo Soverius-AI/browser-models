@@ -1,4 +1,4 @@
-import type { LocalTool } from '@soverius-ai/browser-models';
+import type { LocalTool } from '@soverius-ai/browser-models-tools';
 
 /** A local tool: it runs in the browser and its result goes back to the model. */
 export const currentTime: LocalTool<Record<string, never>> = {

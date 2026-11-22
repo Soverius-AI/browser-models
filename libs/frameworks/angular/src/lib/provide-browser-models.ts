@@ -7,7 +7,7 @@ import {
   provideEnvironmentInitializer,
 } from '@angular/core';
 import type { Engine } from '@soverius-ai/browser-models';
-import type { BrowserModelsAgent } from '@soverius-ai/browser-models/agent';
+import type { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 import { BrowserModels } from './browser-models.ts';
 import { BROWSER_MODELS_AGENT } from './tokens.ts';
 

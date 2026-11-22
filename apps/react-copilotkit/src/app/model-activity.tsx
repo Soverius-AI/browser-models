@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { ReactActivityMessageRenderer } from '@copilotkit/react-core/v2';
-import { MODEL_ACTIVITY } from '@soverius-ai/browser-models';
+import { MODEL_ACTIVITY } from '@soverius-ai/browser-models-agui';
 import {
   modelActivitySchema,
   modelActivityView,

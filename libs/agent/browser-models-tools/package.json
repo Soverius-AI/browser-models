@@ -1,0 +1,53 @@
+{
+  "name": "@soverius-ai/browser-models-tools",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "sideEffects": false,
+  "license": "MIT",
+  "homepage": "https://browser-models.soverius.ai",
+  "description": "Tool calling for @soverius-ai/browser-models-agui: repair, schema checks, MCP, WebMCP and CopilotKit generative UI.",
+  "dependencies": {
+    "@ag-ui/client": "1.0.2",
+    "@cfworker/json-schema": "^4.1.6",
+    "jsonrepair": "^3.15.0",
+    "rxjs": "7.8.1",
+    "tslib": "^2.3.0"
+  },
+  "peerDependencies": {
+    "@soverius-ai/browser-models": "0.1.0",
+    "@soverius-ai/browser-models-agui": "0.1.0"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./mcp": {
+      "types": "./src/mcp.d.ts",
+      "import": "./src/mcp.js",
+      "default": "./src/mcp.js"
+    },
+    "./webmcp": {
+      "types": "./src/webmcp.d.ts",
+      "import": "./src/webmcp.js",
+      "default": "./src/webmcp.js"
+    },
+    "./copilotkit": {
+      "types": "./src/copilotkit.d.ts",
+      "import": "./src/copilotkit.js",
+      "default": "./src/copilotkit.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Soverius-AI/browser-models.git",
+    "directory": "libs/agent/browser-models-tools"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

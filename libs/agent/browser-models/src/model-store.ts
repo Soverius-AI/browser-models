@@ -8,7 +8,9 @@ import type { Availability, Engine } from './lib/engine.ts';
 export interface ModelSource {
   readonly modelIds: readonly string[];
   readonly selectedModel: string;
+  /** Switches to another registered model. */
   selectModel(modelId: string): void;
+  /** The engine of a model, by default the selected one. */
   engine(modelId?: string): Engine;
 }
 
@@ -72,6 +74,7 @@ export class ModelStore {
   }
 
   // getState and subscribe are arrow functions, so they can be passed on without `bind`.
+  /** The current state. A new object after every change. */
   readonly getState = (): ModelState => this.#state;
 
   /** Calls `listener` after every state change. Returns a function that stops it. */

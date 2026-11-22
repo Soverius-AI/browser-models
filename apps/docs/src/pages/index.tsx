@@ -33,11 +33,9 @@ const features = [
     text: 'Download models with progress, inspect cached models, and delete stored files.',
   },
   {
-    title: 'Server fallback — planned',
-    icon: (
-      <path d="M7 18H6a4 4 0 0 1-.7-7.9 7 7 0 0 1 13.5-1.7A5 5 0 0 1 19 18H7Z" />
-    ),
-    text: 'Use a server-hosted model when local inference isn’t available.',
+    title: 'Three layers',
+    icon: <path d="m12 3 10 5-10 5L2 8l10-5Zm-10 9 10 5 10-5M2 16l10 5 10-5" />,
+    text: 'Engines alone for a plain chat, an AG-UI agent for CopilotKit, tool calling when you need it. Take only what you use.',
   },
   {
     title: 'Built on existing standards',
@@ -62,25 +60,28 @@ const features = [
   },
 ];
 
-const example = `import { BrowserModelsAgent } from '@soverius-ai/browser-models/agent';
-import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
+const example = `import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 import { WebLlmEngine } from '@soverius-ai/browser-models/web-llm';
+import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
+import { ToolCalling } from '@soverius-ai/browser-models-tools';
 
 const agent = new BrowserModelsAgent({
-  models: [
-    new PromptApiEngine(),
-    new WebLlmEngine('Qwen3-0.6B-q4f16_1-MLC'),
-  ],
-  prompt: 'You are a friendly assistant. Use hello when asked to greet.',
-  localTools: [
-    {
-      name: 'hello',
-      description: 'Log a hello world greeting.',
-      async execute() {
-        console.log('Hello world!');
+  models: {
+    nano: new PromptApiEngine(),
+    qwen: new WebLlmEngine('Qwen3-0.6B-q4f16_1-MLC'),
+  },
+  defaultModel: 'nano',
+  tools: new ToolCalling({
+    localTools: [
+      {
+        name: 'hello',
+        description: 'Log a hello world greeting.',
+        async execute() {
+          console.log('Hello world!');
+        },
       },
-    },
-  ],
+    ],
+  }),
 });
 
 agent.addMessage({ id: 'user', role: 'user', content: 'Say hello.' });
@@ -101,7 +102,7 @@ export default function Home() {
           <p className="hero__slogan">One API to rule them all</p>
           <p className="hero__subtitle">
             Use the Prompt API, WebLLM, or Transformers.js with one consistent
-            API. Server-model fallback is planned.
+            API: engines alone, as an AG-UI agent, or with tool calling.
           </p>
           <div className="hero__buttons">
             <Link

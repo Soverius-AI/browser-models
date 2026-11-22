@@ -1,33 +1,31 @@
-export type {
-  Availability,
-  ChatMessage,
-  Engine,
-  GenerateRequest,
-  JsonSchema,
-  LoadOptions,
+/**
+ * `@soverius-ai/browser-models`: the engine interface, its settings and stream parts, `Models`, `ModelStore` and `OutputParser`. No dependencies.
+ *
+ * @module core
+ */
+export {
+  EngineKind,
+  SAMPLING_TEMPERATURE,
+  type Availability,
+  type ChatMessage,
+  type Engine,
+  type EnginePart,
+  type FinishReason,
+  type GenerateRequest,
+  type JsonSchema,
+  type LoadOptions,
+  type ModelSettings,
+  type Sampling,
+  type Usage,
 } from './lib/engine.ts';
-export type {
-  Compaction,
-  CompactionRequest,
-  CompactionStatus,
-} from './lib/compaction.ts';
+export { AsyncQueue } from './lib/async-queue.ts';
+export { untilAborted } from './lib/abort.ts';
 export { OutputParser, type OutputPart } from './lib/parser.ts';
-export { buildChatMessages, type PromptMessage } from './lib/prompt.ts';
 export {
-  ToolCallRepair,
-  type RepairOptions,
-  type RepairResult,
-  type RepairStep,
-} from './lib/repair.ts';
-export { AgentRun, MODEL_ACTIVITY, type RunOptions } from './lib/run.ts';
-export { ArgumentsSchema, type SchemaCheck } from './lib/schema.ts';
-export {
-  SummaryCompaction,
-  type SummaryCompactionOptions,
-} from './lib/summary-compaction.ts';
-export type {
-  LocalTool,
-  LocalToolSource,
-  ToolCall,
-  ToolSpec,
-} from './lib/tools.ts';
+  ModelStore,
+  type ModelSource,
+  type ModelState,
+  type ModelStatus,
+  type StorageUse,
+} from './model-store.ts';
+export { Models } from './models.ts';

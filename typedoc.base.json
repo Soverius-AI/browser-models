@@ -1,0 +1,37 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "plugin": ["typedoc-plugin-markdown"],
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "sort": ["kind", "source-order"],
+  "disableSources": true,
+  "fileExtension": ".md",
+  "entryFileName": "index",
+  "outputFileStrategy": "modules",
+  "hidePageHeader": true,
+  "hideBreadcrumbs": true,
+  "useCodeBlocks": true,
+  "expandObjects": true,
+  "parametersFormat": "table",
+  "interfacePropertiesFormat": "table",
+  "classPropertiesFormat": "table",
+  "typeDeclarationFormat": "table",
+  "enumMembersFormat": "table",
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": true
+  },
+  "treatWarningsAsErrors": true,
+  "requiredToBeDocumented": [
+    "Enum",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Function",
+    "Variable"
+  ]
+}

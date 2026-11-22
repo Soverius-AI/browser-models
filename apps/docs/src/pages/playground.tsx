@@ -4,10 +4,29 @@ import Layout from '@theme/Layout';
 import { useRef, useState } from 'react';
 
 const platforms = {
-  angular: { name: 'Angular', logo: 'angular', docs: '/docs/angular' },
-  react: { name: 'React', logo: 'react', docs: '/docs/react' },
-  vue: { name: 'Vue', logo: 'vuedotjs', docs: '/docs/vue' },
-  vanilla: { name: 'Vanilla', logo: 'typescript', docs: '/docs/vanilla' },
+  angular: {
+    name: 'Angular',
+    logo: 'angular',
+    docs: '/docs/frameworks/angular',
+  },
+  react: { name: 'React', logo: 'react', docs: '/docs/frameworks/react' },
+  vue: { name: 'Vue', logo: 'vuedotjs', docs: '/docs/frameworks/vue' },
+  vanilla: {
+    name: 'Vanilla',
+    logo: 'typescript',
+    docs: '/docs/agent/without-copilotkit',
+  },
+  agent: { name: 'Agent, no tools', logo: 'ag-ui', docs: '/docs/agent' },
+  engine: {
+    name: 'Engine only',
+    logo: 'webgpu',
+    docs: '/docs/engines/streaming',
+  },
+  assistant: {
+    name: 'Docs assistant',
+    logo: 'copilotkit',
+    docs: '/docs/examples/docs-assistant',
+  },
 } as const;
 
 type Platform = keyof typeof platforms;
@@ -30,13 +49,29 @@ function on(
 }
 
 const all = ['angular', 'react', 'vue', 'vanilla'] as const;
+/** The two examples without tool calling. */
+const plain = ['agent', 'engine'] as const;
 const copilotKit = ['angular', 'react', 'vue'] as const;
 
 const examples: readonly Example[] = [
   {
+    title: 'Ask the docs',
+    text: 'The model searches these docs with a tool of the agent, answers, and shows the page with a tool of the page.',
+    prompts: on(
+      ['assistant'],
+      'how do I check the Prompt API',
+      'search the docs for compaction',
+    ),
+  },
+  {
     title: 'Chat',
     text: 'Text streams from the model on your device.',
-    prompts: on(all, 'Hello'),
+    prompts: on([...all, ...plain], 'Hello'),
+  },
+  {
+    title: 'Thinking',
+    text: 'The model thinks in <think> tags first. Engine only: OutputParser splits it off; the agent sends it as REASONING events.',
+    prompts: on(plain, 'think about it'),
   },
   {
     title: 'Generative UI',
@@ -192,7 +227,7 @@ export default function Playground() {
   return (
     <Layout
       title="Playground"
-      description="Try in-browser model agents in Angular, React, Vue and vanilla JS."
+      description="Try in-browser model agents in Angular, React, Vue and vanilla JS, and the engines on their own."
     >
       <main className="container margin-vert--lg">
         <h1>Playground</h1>

@@ -1,9 +1,14 @@
-import type {
-  Availability,
-  ChatMessage,
-  Engine,
-  GenerateRequest,
-  LoadOptions,
+import {
+  EngineKind,
+  SAMPLING_TEMPERATURE,
+  type Availability,
+  type ChatMessage,
+  type Engine,
+  type EnginePart,
+  type GenerateRequest,
+  type LoadOptions,
+  type ModelSettings,
+  type Sampling,
 } from '../lib/engine.ts';
 import { AsyncQueue } from '../lib/async-queue.ts';
 import { opfsCache, type FileCache } from './opfs-cache.ts';
@@ -16,7 +21,7 @@ import type {
   TextStreamer,
 } from '@huggingface/transformers';
 
-export interface TransformersJsOptions {
+export interface TransformersJsOptions extends ModelSettings {
   /**
    * How the model is loaded.
    * - `text-generation` (default): text-only models, for example "onnx-community/Qwen3-0.6B-ONNX".
@@ -28,20 +33,24 @@ export interface TransformersJsOptions {
   readonly device?: 'webgpu' | 'wasm';
   /** Weight precision. Default `q4f16` on WebGPU and `q4` on WASM. */
   readonly dtype?: 'q4f16' | 'q4' | 'q8' | 'fp16' | 'fp32';
-  /** Longest reply in tokens. Default 1024. */
-  readonly maxNewTokens?: number;
+  /** Default 1024. */
+  readonly maxOutputTokens?: number;
   /**
-   * Any other transformers.js generation setting, passed to every run as it is: `do_sample`,
-   * `temperature`, `top_p`, `repetition_penalty` and so on. Default `{ do_sample: false }`.
+   * Sets `do_sample` and `temperature`. Default: always the likeliest word (`do_sample: false`),
+   * like `most-predictable`.
    */
-  readonly generation?: Partial<GenerationConfig>;
+  readonly sampling?: Sampling;
   /**
-   * How many tokens the agent may send before it compacts the conversation (see `compaction`
-   * of `BrowserModelsAgent`). transformers.js has no context size to set: the context is the
-   * model's own, limited only by memory. Without this option long conversations are never
-   * compacted and can run out of GPU memory.
+   * How many tokens the agent may send before it compacts the conversation. transformers.js
+   * has no context size to set: the context is the model's own, limited only by memory.
+   * Without this setting long conversations are never compacted and can run out of GPU memory.
    */
   readonly contextWindowSize?: number;
+  /**
+   * Any other transformers.js generation setting, passed to every run as it is: `top_p`,
+   * `top_k`, `repetition_penalty` and so on. The settings above win over the same option in here.
+   */
+  readonly native?: Partial<GenerationConfig>;
   /**
    * Where model files are stored. `cache-api` (default) is transformers.js' own choice;
    * `opfs` stores them in the Origin Private File System. transformers.js keeps this setting
@@ -74,6 +83,7 @@ interface Runner {
  */
 export class TransformersJsEngine implements Engine {
   readonly id: string;
+  readonly kind = EngineKind.TransformersJs;
   readonly supportsConstraint = false;
   readonly contextWindowSize: number | undefined;
   readonly #modelId: string;
@@ -96,10 +106,16 @@ export class TransformersJsEngine implements Engine {
     this.#task = options.task ?? 'text-generation';
     this.#device = options.device ?? 'webgpu';
     this.#dtype = options.dtype ?? (this.#device === 'webgpu' ? 'q4f16' : 'q4');
+    const temperature =
+      options.sampling === undefined
+        ? 0
+        : SAMPLING_TEMPERATURE[options.sampling];
     this.#generation = {
-      max_new_tokens: options.maxNewTokens ?? 1024,
-      do_sample: false,
-      ...options.generation,
+      ...options.native,
+      max_new_tokens: options.maxOutputTokens ?? 1024,
+      ...(temperature > 0
+        ? { do_sample: true, temperature }
+        : { do_sample: options.native?.do_sample ?? false }),
     };
     this.#cache = options.storage === 'opfs' ? opfsCache() : undefined;
     this.#model = new SharedLoad(
@@ -112,6 +128,7 @@ export class TransformersJsEngine implements Engine {
     );
   }
 
+  /** `unavailable` without WebGPU (on `device: 'webgpu'`); `available` once the files are cached. */
   async availability(): Promise<Availability> {
     if (this.#device === 'webgpu' && !('gpu' in navigator))
       return 'unavailable';
@@ -168,7 +185,7 @@ export class TransformersJsEngine implements Engine {
   async *generate({
     messages,
     signal,
-  }: GenerateRequest): AsyncGenerator<string> {
+  }: GenerateRequest): AsyncGenerator<EnginePart> {
     const runner = await this.#model.get(signal ? { signal } : {});
     const { TextStreamer, InterruptableStoppingCriteria } =
       await this.#transformers();
@@ -177,14 +194,19 @@ export class TransformersJsEngine implements Engine {
     signal?.addEventListener('abort', stop);
 
     // transformers.js calls back with text pieces; hand them to the async generator.
-    const queue = new AsyncQueue<string>();
+    const queue = new AsyncQueue<EnginePart>();
+    let outputTokens = 0;
     const streamer = new TextStreamer(runner.tokenizer, {
       skip_prompt: true,
       skip_special_tokens: true,
       callback_function: (text) => {
-        if (text) queue.push(text);
+        if (text) queue.push({ type: 'text', text });
+      },
+      token_callback_function: (tokens) => {
+        outputTokens += tokens.length;
       },
     });
+    const promptTokens = countPromptTokens(runner.tokenizer, messages);
     runner.run(messages, { streamer, stopping }).then(
       () => queue.close(),
       (error: unknown) => queue.fail(error),
@@ -196,6 +218,19 @@ export class TransformersJsEngine implements Engine {
       finished = true;
       // transformers.js ends quietly when interrupted; report the abort to the caller.
       signal?.throwIfAborted();
+      const limit = this.#generation.max_new_tokens;
+      yield {
+        type: 'finish',
+        reason:
+          limit !== undefined && limit !== null && outputTokens >= limit
+            ? 'length'
+            : 'stop',
+        usage: {
+          totalTokens: (promptTokens ?? 0) + outputTokens,
+          ...(promptTokens === undefined ? {} : { promptTokens }),
+          outputTokens,
+        },
+      };
     } finally {
       signal?.removeEventListener('abort', stop);
       // The caller stopped reading early: stop generating.
@@ -313,5 +348,23 @@ export class TransformersJsEngine implements Engine {
       },
     );
     return this.#library;
+  }
+}
+
+/** The tokens of the prompt with the model's chat template, or undefined when it cannot tell. */
+function countPromptTokens(
+  tokenizer: PreTrainedTokenizer,
+  messages: readonly ChatMessage[],
+): number | undefined {
+  try {
+    const ids: unknown = tokenizer.apply_chat_template([...messages], {
+      tokenize: true,
+      add_generation_prompt: true,
+      return_tensor: false,
+      return_dict: false,
+    });
+    return Array.isArray(ids) ? ids.length : undefined;
+  } catch {
+    return undefined; // a template that needs more than text; the run itself reports problems
   }
 }

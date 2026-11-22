@@ -1,4 +1,5 @@
 import type { AgentSubscriber } from '@ag-ui/client';
+import { AgentEvents } from '@soverius-ai/browser-models-agui';
 import {
   devtoolsFromUrl,
   modelActivityView,
@@ -111,8 +112,10 @@ const subscriber: AgentSubscriber = {
   onTextMessageContentEvent: ({ event }) => void current?.append(event.delta),
   onToolCallStartEvent: ({ event }) =>
     void line('tool', `→ ${event.toolCallName}`),
-  onActivitySnapshotEvent: ({ event }) =>
-    showActivity(event.messageId, event.content as ModelActivity),
+  onActivitySnapshotEvent: ({ event }) => {
+    const activity = AgentEvents.modelActivity(event);
+    if (activity) showActivity(event.messageId, activity);
+  },
   onRunErrorEvent: ({ event }) => void line('error', event.message),
 };
 

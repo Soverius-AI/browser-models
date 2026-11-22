@@ -1,0 +1,6 @@
+@import '../../../libs/examples/shared/src/theme.css';
+@source './';
+
+#root {
+  height: 100%;
+}

@@ -3,7 +3,7 @@ import { CopilotKitProvider } from '@copilotkit/vue/v2';
 import { agent } from './agent';
 import ChatPage from './ChatPage.vue';
 import ModelActivity from './ModelActivity.vue';
-import { MODEL_ACTIVITY } from '@soverius-ai/browser-models';
+import { MODEL_ACTIVITY } from '@soverius-ai/browser-models-agui';
 import {
   modelActivitySchema,
   sandboxDesignSkill,

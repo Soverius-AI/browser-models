@@ -5,18 +5,13 @@
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
   "dependencies": {
-    "@ag-ui/client": "1.0.2",
-    "@ag-ui/core": "1.0.2",
-    "@cfworker/json-schema": "^4.1.6",
-    "jsonrepair": "^3.15.0",
-    "rxjs": "7.8.1",
     "tslib": "^2.3.0",
     "@types/dom-chromium-ai": "^0.0.18"
   },
   "sideEffects": false,
   "license": "MIT",
   "homepage": "https://browser-models.soverius.ai",
-  "description": "Run models in the browser (Prompt API, WebLLM, transformers.js) as AG-UI agents.",
+  "description": "Run models in the browser: one engine interface for the Prompt API, WebLLM and transformers.js.",
   "peerDependencies": {
     "@mlc-ai/web-llm": "^0.2.88",
     "@huggingface/transformers": "^4.3.2"
@@ -35,11 +30,6 @@
       "types": "./src/index.d.ts",
       "import": "./src/index.js",
       "default": "./src/index.js"
-    },
-    "./agent": {
-      "types": "./src/agent.d.ts",
-      "import": "./src/agent.js",
-      "default": "./src/agent.js"
     },
     "./prompt-api": {
       "types": "./src/prompt-api.d.ts",
@@ -61,20 +51,10 @@
       "import": "./src/transformers.js",
       "default": "./src/transformers.js"
     },
-    "./webmcp": {
-      "types": "./src/webmcp.d.ts",
-      "import": "./src/webmcp.js",
-      "default": "./src/webmcp.js"
-    },
-    "./mcp": {
-      "types": "./src/mcp.d.ts",
-      "import": "./src/mcp.js",
-      "default": "./src/mcp.js"
-    },
-    "./copilotkit": {
-      "types": "./src/copilotkit.d.ts",
-      "import": "./src/copilotkit.js",
-      "default": "./src/copilotkit.js"
+    "./engines": {
+      "types": "./src/engines.d.ts",
+      "import": "./src/engines.js",
+      "default": "./src/engines.js"
     }
   },
   "repository": {

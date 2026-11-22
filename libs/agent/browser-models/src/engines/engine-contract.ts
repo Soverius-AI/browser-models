@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Engine } from '../lib/engine.ts';
+import type { Engine, EnginePart } from '../lib/engine.ts';
 
 /**
  * One controllable model, shared by the library mocks of the engine specs. A mock calls
@@ -84,9 +84,12 @@ export class FakeModel {
 
 const messages = [{ role: 'user' as const, content: 'Hi' }];
 
-async function collect(stream: AsyncIterable<string>): Promise<string> {
+/** The text of a reply. */
+export async function collect(
+  stream: AsyncIterable<EnginePart>,
+): Promise<string> {
   let text = '';
-  for await (const chunk of stream) text += chunk;
+  for await (const part of stream) if (part.type === 'text') text += part.text;
   return text;
 }
 
@@ -169,9 +172,17 @@ export function describeEngineContract(
       expect(await engine.availability()).toBe('available');
     });
 
-    it('streams the reply', async () => {
+    it('streams the reply and ends with a finish part', async () => {
       await load();
-      expect(await collect(engine.generate({ messages }))).toBe('Hello');
+      const parts: EnginePart[] = [];
+      for await (const part of engine.generate({ messages })) parts.push(part);
+
+      expect(parts.slice(0, 2)).toEqual([
+        { type: 'text', text: 'Hel' },
+        { type: 'text', text: 'lo' },
+      ]);
+      expect(parts).toHaveLength(3);
+      expect(parts[2]).toMatchObject({ type: 'finish', reason: 'stop' });
       expect(model.stopped).toBe(false);
     });
 
@@ -179,24 +190,24 @@ export function describeEngineContract(
       await load();
       const abort = new AbortController();
       const reply = engine.generate({ messages, signal: abort.signal });
-      const chunks: string[] = [];
+      const parts: EnginePart[] = [];
 
       await expect(
         (async () => {
-          for await (const chunk of reply) {
-            chunks.push(chunk);
+          for await (const part of reply) {
+            parts.push(part);
             abort.abort();
           }
         })(),
       ).rejects.toThrow('aborted');
-      expect(chunks).toEqual(['Hel']);
+      expect(parts).toEqual([{ type: 'text', text: 'Hel' }]);
       expect(model.stopped).toBe(true);
     });
 
     it('stops generating when the caller stops reading', async () => {
       await load();
-      for await (const chunk of engine.generate({ messages })) {
-        expect(chunk).toBe('Hel');
+      for await (const part of engine.generate({ messages })) {
+        expect(part).toEqual({ type: 'text', text: 'Hel' });
         break;
       }
       expect(model.stopped).toBe(true);

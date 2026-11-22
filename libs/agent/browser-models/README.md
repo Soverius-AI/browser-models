@@ -1,6 +1,6 @@
 # @soverius-ai/browser-models
 
-Run language models in the browser (Chrome/Edge Prompt API, WebLLM, transformers.js) as [AG-UI](https://docs.ag-ui.com) agents. CopilotKit or any AG-UI client works unchanged.
+Run language models in the browser with one engine interface: the Chrome/Edge Prompt API, WebLLM and transformers.js. No AG-UI, no dependencies.
 
 ```bash
 pnpm add @soverius-ai/browser-models
@@ -9,16 +9,24 @@ pnpm add @huggingface/transformers  # only for TransformersJsEngine
 ```
 
 ```ts
-import { BrowserModelsAgent } from '@soverius-ai/browser-models/agent';
 import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 
-const agent = new BrowserModelsAgent({
-  models: { nano: new PromptApiEngine() },
-  defaultModel: 'nano',
-});
+const engine = new PromptApiEngine({ sampling: 'balanced' });
+if ((await engine.availability()) !== 'unavailable') {
+  await engine.load();
+  for await (const part of engine.generate({
+    messages: [{ role: 'user', content: 'Hi' }],
+  }))
+    if (part.type === 'text') output.textContent += part.text;
+}
 ```
 
-Entries: `.`, `/agent`, `/prompt-api`, `/web-llm`, `/web-llm/worker`, `/transformers`, `/webmcp`, `/mcp`, `/copilotkit` ([Packages](https://browser-models.soverius.ai/docs#packages)).
-Framework packages: `@soverius-ai/browser-models-angular`, `@soverius-ai/browser-models-react`, `@soverius-ai/browser-models-vue`.
+Entries: `.`, `/prompt-api`, `/web-llm`, `/web-llm/worker`, `/transformers`, `/engines` (all three, by `EngineKind`).
+
+| Package                                                 | For                                             |
+| ------------------------------------------------------- | ----------------------------------------------- |
+| `@soverius-ai/browser-models-agui`                      | AG-UI agent, for CopilotKit or any AG-UI client |
+| `@soverius-ai/browser-models-tools`                     | tool calling, MCP, WebMCP, generative UI        |
+| `@soverius-ai/browser-models-angular`, `-react`, `-vue` | framework bindings                              |
 
 [Docs](https://browser-models.soverius.ai/docs) · [Playground](https://browser-models.soverius.ai/playground) · by [Soverius AI](https://soverius.ai) · MIT
