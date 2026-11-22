@@ -1,6 +1,6 @@
-import { BrowserModelsAgent } from './agent.ts';
 import type { Availability, Engine } from './lib/engine.ts';
 import { ModelStore } from './model-store.ts';
+import { Models } from './models.ts';
 
 function engine(
   availability: Availability,
@@ -16,7 +16,7 @@ function engine(
     },
     unload: async () => undefined,
     async *generate() {
-      yield 'hi';
+      yield { type: 'text' as const, text: 'hi' };
     },
     ...extra,
   };
@@ -24,10 +24,7 @@ function engine(
 
 describe('ModelStore', () => {
   it('checks the selected model and notifies subscribers', async () => {
-    const agent = new BrowserModelsAgent({
-      models: { a: engine('available') },
-      defaultModel: 'a',
-    });
+    const agent = new Models({ a: engine('available') }, 'a');
     const store = new ModelStore(agent);
     await store.refresh(); // let the store's own first check finish
     const seen: string[] = [];
@@ -39,10 +36,7 @@ describe('ModelStore', () => {
   });
 
   it('downloads the selected model and reports progress', async () => {
-    const agent = new BrowserModelsAgent({
-      models: { a: engine('downloadable') },
-      defaultModel: 'a',
-    });
+    const agent = new Models({ a: engine('downloadable') }, 'a');
     const store = new ModelStore(agent);
     const progress: (number | undefined)[] = [];
     store.subscribe(() => progress.push(store.getState().progress));
@@ -58,16 +52,16 @@ describe('ModelStore', () => {
 
   it('switches models explicitly and lists them with storage', async () => {
     const deleted: string[] = [];
-    const agent = new BrowserModelsAgent({
-      models: {
+    const agent = new Models(
+      {
         qwen: engine('available', {
           id: 'web-llm:qwen',
           delete: async () => void deleted.push('qwen'),
         }),
         nano: engine('unavailable'),
       },
-      defaultModel: 'qwen',
-    });
+      'qwen',
+    );
     const store = new ModelStore(agent);
 
     await store.selectModel('nano');
@@ -100,10 +94,7 @@ describe('ModelStore', () => {
         throw new Error('WebLLM could not be loaded');
       },
     });
-    const agent = new BrowserModelsAgent({
-      models: { broken },
-      defaultModel: 'broken',
-    });
+    const agent = new Models({ broken }, 'broken');
     const store = new ModelStore(agent);
 
     await store.refresh();
@@ -116,13 +107,13 @@ describe('ModelStore', () => {
 
   it('unloads the model the user switched away from', async () => {
     const unloaded: string[] = [];
-    const agent = new BrowserModelsAgent({
-      models: {
+    const agent = new Models(
+      {
         a: engine('available', { unload: async () => void unloaded.push('a') }),
         b: engine('available', { unload: async () => void unloaded.push('b') }),
       },
-      defaultModel: 'a',
-    });
+      'a',
+    );
     const store = new ModelStore(agent);
 
     await store.selectModel('a'); // no switch
@@ -141,10 +132,7 @@ describe('ModelStore', () => {
           finish = resolve;
         }),
     });
-    const agent = new BrowserModelsAgent({
-      models: { slow, other: engine('available') },
-      defaultModel: 'slow',
-    });
+    const agent = new Models({ slow, other: engine('available') }, 'slow');
     const store = new ModelStore(agent);
 
     const download = store.download();
@@ -173,10 +161,7 @@ describe('ModelStore', () => {
         stopLoad(new DOMException('The model was unloaded.', 'AbortError'));
       },
     });
-    const agent = new BrowserModelsAgent({
-      models: { slow, other: engine('available') },
-      defaultModel: 'slow',
-    });
+    const agent = new Models({ slow, other: engine('available') }, 'slow');
     const store = new ModelStore(agent);
 
     const download = store.download();
@@ -195,16 +180,16 @@ describe('ModelStore', () => {
   });
 
   it('keeps the error of a failed delete', async () => {
-    const agent = new BrowserModelsAgent({
-      models: {
+    const agent = new Models(
+      {
         a: engine('available', {
           delete: async () => {
             throw new Error('Storage is locked');
           },
         }),
       },
-      defaultModel: 'a',
-    });
+      'a',
+    );
     const store = new ModelStore(agent);
 
     await store.deleteModel('a');
@@ -212,10 +197,7 @@ describe('ModelStore', () => {
   });
 
   it('can be passed on without bind', async () => {
-    const agent = new BrowserModelsAgent({
-      models: { a: engine('available') },
-      defaultModel: 'a',
-    });
+    const agent = new Models({ a: engine('available') }, 'a');
     const { getState, subscribe, refresh } = new ModelStore(agent);
     const listener = vi.fn();
     subscribe(listener);

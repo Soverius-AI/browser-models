@@ -1,9 +1,6 @@
 import { onScopeDispose, shallowReadonly, shallowRef, type Ref } from 'vue';
-import type {
-  BrowserModelsAgent,
-  ModelState,
-  ModelStore,
-} from '@soverius-ai/browser-models/agent';
+import type { ModelState, ModelStore } from '@soverius-ai/browser-models';
+import type { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 
 /**
  * The state of a model store as a read-only Vue ref, updated on every change.

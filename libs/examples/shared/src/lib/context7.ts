@@ -1,5 +1,8 @@
-import type { LocalTool, LocalToolSource } from '@soverius-ai/browser-models';
-import { McpTools } from '@soverius-ai/browser-models/mcp';
+import type {
+  LocalTool,
+  LocalToolSource,
+} from '@soverius-ai/browser-models-tools';
+import { McpTools } from '@soverius-ai/browser-models-tools/mcp';
 
 const STORAGE_KEY = 'context7-api-key';
 

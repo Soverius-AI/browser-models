@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "peerDependencies": {
     "@angular/core": "^22.2.0",
-    "@soverius-ai/browser-models": "0.1.0"
+    "@soverius-ai/browser-models": "0.1.0",
+    "@soverius-ai/browser-models-agui": "0.1.0"
   },
   "sideEffects": false,
   "license": "MIT",
   "homepage": "https://browser-models.soverius.ai",
-  "description": "Angular layer for @soverius-ai/browser-models: provideBrowserModels(), signals, debugger wiring.",
+  "description": "Angular layer for @soverius-ai/browser-models-agui: provideBrowserModels(), signals, debugger wiring.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Soverius-AI/browser-models.git",

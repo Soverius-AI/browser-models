@@ -1,0 +1,58 @@
+{
+  "name": "browser-models-tools",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/agent/browser-models-tools/src",
+  "projectType": "library",
+  "tags": ["scope:agent", "type:tools"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/libs/agent/browser-models-tools"],
+      "inputs": [
+        "production",
+        "^production",
+        {
+          "externalDependencies": ["esbuild", "typescript"]
+        },
+        "{workspaceRoot}/tools/library-build.ts"
+      ],
+      "options": {
+        "command": "node tools/library-build.ts libs/agent/browser-models-tools dist/libs/agent/browser-models-tools"
+      },
+      "dependsOn": ["^build"]
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
+      }
+    },
+    "publint": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "cache": true,
+      "inputs": ["production", "^production"],
+      "options": {
+        "command": "publint dist/libs/agent/browser-models-tools --strict"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        "^production",
+        {
+          "externalDependencies": ["typescript"]
+        }
+      ],
+      "options": {
+        "cwd": "{projectRoot}",
+        "commands": [
+          "tsc -p tsconfig.lib.json --noEmit",
+          "tsc -p tsconfig.spec.json --noEmit"
+        ],
+        "parallel": false
+      }
+    }
+  }
+}

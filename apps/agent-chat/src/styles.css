@@ -1,0 +1,7 @@
+@import '../../../libs/examples/shared/src/theme.css';
+@source './';
+@source '../index.html';
+
+#messages .chat-bubble {
+  white-space: pre-wrap;
+}

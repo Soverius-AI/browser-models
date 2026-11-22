@@ -34,13 +34,28 @@ export default [
               onlyDependOnLibsWithTags: ['scope:agent'],
             },
             { sourceTag: 'scope:examples', onlyDependOnLibsWithTags: ['*'] },
-            // Layers
+            // Layers: engines (core) ← AG-UI agent ← tool calling; frameworks build on the agent.
             { sourceTag: 'type:core', onlyDependOnLibsWithTags: [] },
             {
-              sourceTag: 'type:framework',
+              sourceTag: 'type:agent',
               onlyDependOnLibsWithTags: ['type:core'],
             },
-            { sourceTag: 'type:util', onlyDependOnLibsWithTags: ['type:core'] },
+            {
+              sourceTag: 'type:tools',
+              onlyDependOnLibsWithTags: ['type:core', 'type:agent'],
+            },
+            {
+              sourceTag: 'type:framework',
+              onlyDependOnLibsWithTags: ['type:core', 'type:agent'],
+            },
+            {
+              sourceTag: 'type:util',
+              onlyDependOnLibsWithTags: [
+                'type:core',
+                'type:agent',
+                'type:tools',
+              ],
+            },
             { sourceTag: 'type:app', onlyDependOnLibsWithTags: ['*'] },
           ],
         },

@@ -1,10 +1,26 @@
-import { describeEngineContract, FakeModel } from './engine-contract.ts';
+import { EngineKind } from '../lib/engine.ts';
+import { describeEngineContract } from '../testing/engine-contract.ts';
+import { FakeModel } from '../testing/fake-model.ts';
 import { WebLlmEngine } from './web-llm.ts';
 
 const model = new FakeModel();
-const requests: { response_format?: unknown }[] = [];
+const requests: Record<string, unknown>[] = [];
 const reloads: unknown[][] = [];
 const terminated = vi.fn();
+/** Which WebLLM class each load created: `main` (MLCEngine) or `worker` (WebWorkerMLCEngine). */
+const created: string[] = [];
+
+/** jsdom has no Worker: records how the engine creates its default worker. */
+class FakeWorker {
+  static readonly started: { url: string; options: WorkerOptions }[] = [];
+  constructor(url: URL, options: WorkerOptions) {
+    FakeWorker.started.push({ url: url.href, options });
+  }
+  terminate(): void {
+    terminated();
+  }
+}
+vi.stubGlobal('Worker', FakeWorker);
 
 vi.mock('@mlc-ai/web-llm', () => {
   /** Stands in for both MLCEngine and WebWorkerMLCEngine. */
@@ -15,6 +31,7 @@ vi.mock('@mlc-ai/web-llm', () => {
 
     /** `(config)` for MLCEngine, `(worker, config)` for WebWorkerMLCEngine. */
     constructor(...args: unknown[]) {
+      created.push(args.length === 2 ? 'worker' : 'main');
       const config = args.at(-1) as {
         initProgressCallback: (report: { progress: number }) => void;
       };
@@ -42,11 +59,26 @@ vi.mock('@mlc-ai/web-llm', () => {
 
     readonly chat = {
       completions: {
-        create: async (request: { response_format?: unknown }) => {
+        create: async (request: Record<string, unknown>) => {
           requests.push(request);
           return (async function* () {
-            for await (const content of model.reply())
-              yield { choices: [{ delta: { content } }] };
+            let completion = 0;
+            for await (const content of model.reply()) {
+              completion++;
+              yield { choices: [{ delta: { content }, finish_reason: null }] };
+            }
+            // Like WebLLM: the finish reason, then the counts when `include_usage` is set.
+            const reason =
+              request['max_tokens'] === completion ? 'length' : 'stop';
+            yield { choices: [{ delta: {}, finish_reason: reason }] };
+            yield {
+              choices: [],
+              usage: {
+                prompt_tokens: 7,
+                completion_tokens: completion,
+                total_tokens: 7 + completion,
+              },
+            };
           })();
         },
       },
@@ -54,7 +86,7 @@ vi.mock('@mlc-ai/web-llm', () => {
   }
   return {
     MLCEngine,
-    WebWorkerMLCEngine: MLCEngine,
+    WebWorkerMLCEngine: class extends MLCEngine {},
     prebuiltAppConfig: {
       model_list: [
         { model_id: 'Small-MLC', overrides: { context_window_size: 4096 } },
@@ -80,6 +112,34 @@ describe('WebLlmEngine', () => {
     requests.length = 0;
     reloads.length = 0;
     terminated.mockClear();
+    created.length = 0;
+    FakeWorker.started.length = 0;
+  });
+
+  it("runs the model in the package's worker by default", async () => {
+    const engine = new WebLlmEngine('Any-MLC');
+    await engine.load();
+
+    expect(created).toEqual(['worker']);
+    expect(FakeWorker.started).toEqual([
+      {
+        url: expect.stringMatching(/\/web-llm-default\.worker\.js$/),
+        options: { type: 'module' },
+      },
+    ]);
+    await engine.unload();
+    expect(terminated).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs the model on the main thread with worker: false', async () => {
+    await new WebLlmEngine('Any-MLC', { worker: false }).load();
+
+    expect(created).toEqual(['main']);
+    expect(FakeWorker.started).toEqual([]);
+  });
+
+  it('is the WebLLM kind', () => {
+    expect(new WebLlmEngine('Any-MLC').kind).toBe(EngineKind.WebLlm);
   });
 
   it('is unavailable without WebGPU', async () => {
@@ -96,10 +156,34 @@ describe('WebLlmEngine', () => {
     });
     for await (const chunk of reply) void chunk;
 
-    expect(requests[0]?.response_format).toEqual({
+    expect(requests[0]?.['response_format']).toEqual({
       type: 'json_object',
       schema: '{"type":"object"}',
     });
+  });
+
+  it('reports why the reply ended and the tokens WebLLM counted', async () => {
+    const parts = [];
+    for await (const part of new WebLlmEngine('Any-MLC').generate({ messages }))
+      parts.push(part);
+
+    expect(parts.at(-1)).toEqual({
+      type: 'finish',
+      reason: 'stop',
+      usage: { totalTokens: 9, promptTokens: 7, outputTokens: 2 },
+    });
+    expect(requests[0]?.['stream_options']).toEqual({ include_usage: true });
+  });
+
+  it('limits the reply to maxOutputTokens and reports the cut', async () => {
+    const parts = [];
+    for await (const part of new WebLlmEngine('Any-MLC', {
+      maxOutputTokens: 2,
+    }).generate({ messages }))
+      parts.push(part);
+
+    expect(requests[0]?.['max_tokens']).toBe(2);
+    expect(parts.at(-1)).toMatchObject({ type: 'finish', reason: 'length' });
   });
 
   it("loads with the model's own settings by default", async () => {
@@ -108,14 +192,15 @@ describe('WebLlmEngine', () => {
     expect(reloads).toEqual([['Any-MLC', undefined]]);
   });
 
-  it('passes the context size and the chat options to WebLLM', async () => {
+  it('passes the settings and the native chat options to WebLLM', async () => {
     await new WebLlmEngine('Any-MLC', {
       contextWindowSize: 16384,
-      chatOptions: { temperature: 0.2, context_window_size: 2048 },
+      sampling: 'balanced',
+      native: { top_p: 0.9, temperature: 0.2, context_window_size: 2048 },
     }).load();
 
     expect(reloads).toEqual([
-      ['Any-MLC', { temperature: 0.2, context_window_size: 16384 }],
+      ['Any-MLC', { top_p: 0.9, temperature: 0.7, context_window_size: 16384 }],
     ]);
   });
 
@@ -135,7 +220,7 @@ describe('WebLlmEngine', () => {
     ).toBe(16384);
     expect(
       new WebLlmEngine('Small-MLC', {
-        chatOptions: { context_window_size: 8192 },
+        native: { context_window_size: 8192 },
       }).contextWindowSize,
     ).toBe(8192);
   });

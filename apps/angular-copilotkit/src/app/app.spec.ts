@@ -5,7 +5,7 @@ import {
   withAgent,
 } from '@soverius-ai/browser-models-angular';
 import type { Engine } from '@soverius-ai/browser-models';
-import { BrowserModelsAgent } from '@soverius-ai/browser-models/agent';
+import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 import { App } from './app';
 
 const unavailable: Engine = {
@@ -15,7 +15,7 @@ const unavailable: Engine = {
   load: async () => undefined,
   unload: async () => undefined,
   async *generate() {
-    yield '';
+    yield { type: 'text' as const, text: '' };
   },
 };
 

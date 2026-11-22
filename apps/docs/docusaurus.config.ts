@@ -1,5 +1,6 @@
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import sourceFiles from './plugins/source-files';
 
 const site = 'https://soverius.ai';
 const github = 'https://github.com/Soverius-AI/browser-models';
@@ -47,8 +48,28 @@ const config: Config = {
   baseUrl: '/',
   favicon: 'img/browser-models-mark.svg',
   onBrokenLinks: 'throw',
-  markdown: { mermaid: true },
+  // .md files are plain Markdown (the generated API reference has no MDX), .mdx files are MDX.
+  markdown: { mermaid: true, format: 'detect' },
   themes: ['@docusaurus/theme-mermaid'],
+  plugins: [
+    sourceFiles,
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        // Pages that moved when the docs were split into layers.
+        redirects: [
+          { from: '/docs/chat', to: '/docs/engines/streaming' },
+          { from: '/docs/models', to: '/docs/engines/models' },
+          { from: '/docs/compaction', to: '/docs/agent/compaction' },
+          { from: '/docs/vanilla', to: '/docs/agent/without-copilotkit' },
+          { from: '/docs/generative-ui', to: '/docs/tools/generative-ui' },
+          { from: '/docs/angular', to: '/docs/frameworks/angular' },
+          { from: '/docs/react', to: '/docs/frameworks/react' },
+          { from: '/docs/vue', to: '/docs/frameworks/vue' },
+        ],
+      },
+    ],
+  ],
   stylesheets: [
     'https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700;800&family=Inter:wght@400;500;600&display=swap',
   ],
@@ -73,6 +94,11 @@ const config: Config = {
       items: [
         { to: '/docs', label: 'Docs', position: 'left' },
         { to: '/playground', label: 'Playground', position: 'left' },
+        {
+          to: '/docs/api/browser-models',
+          label: 'API',
+          position: 'left',
+        },
         { href: `${site}/newsletter`, label: 'Newsletter', position: 'right' },
         { href: site, label: 'soverius.ai', position: 'right' },
         { href: github, label: 'GitHub', position: 'right' },

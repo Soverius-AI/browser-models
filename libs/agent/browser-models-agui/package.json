@@ -1,0 +1,33 @@
+{
+  "name": "@soverius-ai/browser-models-agui",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "sideEffects": false,
+  "license": "MIT",
+  "homepage": "https://browser-models.soverius.ai",
+  "description": "AG-UI agent for @soverius-ai/browser-models: works with CopilotKit and any AG-UI client.",
+  "peerDependencies": {
+    "@soverius-ai/browser-models": "0.1.0",
+    "@ag-ui/client": "^1.0.0",
+    "@ag-ui/core": "^1.0.0",
+    "rxjs": "^7.8.0"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Soverius-AI/browser-models.git",
+    "directory": "libs/agent/browser-models-agui"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

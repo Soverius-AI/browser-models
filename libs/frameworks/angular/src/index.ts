@@ -1,3 +1,8 @@
+/**
+ * `@soverius-ai/browser-models-angular`: `provideBrowserModels()`, model state as signals, devtools.
+ *
+ * @packageDocumentation
+ */
 export {
   BrowserModels,
   injectBrowserModels,

@@ -1,0 +1,19 @@
+{
+  "name": "example-snippets",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/examples/snippets/src",
+  "projectType": "library",
+  "tags": ["scope:examples", "type:util"],
+  "targets": {
+    "typecheck": {
+      "inputs": [
+        "default",
+        "^production",
+        { "externalDependencies": ["typescript"] }
+      ],
+      "options": {
+        "command": "tsc -p tsconfig.lib.json --noEmit && tsc -p tsconfig.spec.json --noEmit"
+      }
+    }
+  }
+}

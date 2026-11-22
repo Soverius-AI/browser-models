@@ -1,8 +1,15 @@
-import type {
-  Availability,
-  Engine,
-  GenerateRequest,
-  LoadOptions,
+import {
+  EngineKind,
+  SAMPLING_TEMPERATURE,
+  type Availability,
+  type Engine,
+  type EnginePart,
+  type FinishReason,
+  type GenerateRequest,
+  type LoadOptions,
+  type ModelSettings,
+  type Sampling,
+  type Usage,
 } from '../lib/engine.ts';
 import type {
   AppConfig,
@@ -13,29 +20,31 @@ import { SharedLoad } from './shared-load.ts';
 
 type WebLlmLibrary = typeof import('@mlc-ai/web-llm');
 
-export interface WebLlmOptions {
+export interface WebLlmOptions extends ModelSettings {
   /**
-   * Creates the Web Worker the model runs in, so the page stays responsive. Called once per
-   * load; `unload()` and `delete()` terminate the worker. The worker file calls
-   * `startWebLlmWorker()` from `@soverius-ai/browser-models/web-llm/worker`.
+   * Where the model runs. Default: a Web Worker of this package, so the page stays responsive.
+   * `false` runs it on the main thread. A function creates your own worker, whose file calls
+   * `startWebLlmWorker()` from `@soverius-ai/browser-models/web-llm/worker`. The worker is
+   * created once per load; `unload()` and `delete()` terminate it.
    */
-  readonly worker?: () => Worker;
+  readonly worker?: false | (() => Worker);
   /** WebLLM app config, for example `{ ...prebuiltAppConfig, cacheBackend: 'opfs' }`. */
   readonly appConfig?: AppConfig;
   /**
-   * How many tokens fit into the model's context: system prompt, tool descriptions, the whole
-   * conversation, tool results and the reply. Default: what the model was built with, 4096 for
-   * nearly every prebuilt WebLLM model (1024 for the smallest). A run that needs more fails with
-   * WebLLM's `ContextWindowSizeExceededError`. A larger window needs more GPU memory. The agent
-   * compacts long conversations to fit (see `compaction` of `BrowserModelsAgent`).
+   * Default: what the model was built with: 4096 for most prebuilt WebLLM models, 2048 or 1024
+   * for small ones. A call that needs more fails with WebLLM's
+   * `ContextWindowSizeExceededError`. A larger window needs more GPU memory.
    */
   readonly contextWindowSize?: number;
+  /** Default: until the model stops or the context is full. */
+  readonly maxOutputTokens?: number;
+  /** Sets `temperature`. Default: the model's own setting. */
+  readonly sampling?: Sampling;
   /**
-   * Any other WebLLM chat option, passed to `reload()` as it is: `temperature`, `top_p`,
-   * `repetition_penalty`, `sliding_window_size` and so on. `contextWindowSize` wins over
-   * `context_window_size` in here.
+   * Any other WebLLM chat option, passed to `reload()` as it is: `top_p`, `repetition_penalty`,
+   * `sliding_window_size` and so on. The settings above win over the same option in here.
    */
-  readonly chatOptions?: ChatOptions;
+  readonly native?: ChatOptions;
 }
 
 /** A WebLLM engine and the worker it runs in, if any. */
@@ -51,6 +60,7 @@ interface Loaded {
  */
 export class WebLlmEngine implements Engine {
   readonly id: string;
+  readonly kind = EngineKind.WebLlm;
   readonly supportsConstraint = true;
   readonly #modelId: string;
   readonly #options: WebLlmOptions;
@@ -73,11 +83,12 @@ export class WebLlmEngine implements Engine {
   get contextWindowSize(): number | undefined {
     return (
       this.#options.contextWindowSize ??
-      this.#options.chatOptions?.context_window_size ??
+      this.#options.native?.context_window_size ??
       this.#builtContextWindowSize
     );
   }
 
+  /** `unavailable` without WebGPU; `available` once WebLLM has the model in its cache. */
   async availability(): Promise<Availability> {
     if (!('gpu' in navigator)) return 'unavailable';
     if (this.#model.state === 'loading') return 'downloading';
@@ -106,8 +117,9 @@ export class WebLlmEngine implements Engine {
     messages,
     constraint,
     signal,
-  }: GenerateRequest): AsyncGenerator<string> {
+  }: GenerateRequest): AsyncGenerator<EnginePart> {
     const { mlc } = await this.#model.get(signal ? { signal } : {});
+    const { maxOutputTokens } = this.#options;
     const stop = () => void mlc.interruptGenerate();
     signal?.addEventListener('abort', stop);
     let finished = false;
@@ -118,6 +130,10 @@ export class WebLlmEngine implements Engine {
           content: message.content,
         })),
         stream: true,
+        stream_options: { include_usage: true },
+        ...(maxOutputTokens === undefined
+          ? {}
+          : { max_tokens: maxOutputTokens }),
         ...(constraint
           ? {
               response_format: {
@@ -127,13 +143,25 @@ export class WebLlmEngine implements Engine {
             }
           : {}),
       });
+      let reason: FinishReason = 'stop';
+      let usage: Usage | undefined;
       for await (const chunk of chunks) {
-        const text = chunk.choices[0]?.delta.content;
-        if (text) yield text;
+        const [choice] = chunk.choices;
+        if (choice?.delta.content)
+          yield { type: 'text', text: choice.delta.content };
+        if (choice?.finish_reason === 'length') reason = 'length';
+        // With `include_usage` the last chunk has no choices, only the counts.
+        if (chunk.usage)
+          usage = {
+            totalTokens: chunk.usage.total_tokens,
+            promptTokens: chunk.usage.prompt_tokens,
+            outputTokens: chunk.usage.completion_tokens,
+          };
       }
       finished = true;
       // WebLLM ends the stream quietly when interrupted; report the abort to the caller.
       signal?.throwIfAborted();
+      yield { type: 'finish', reason, ...(usage ? { usage } : {}) };
     } finally {
       signal?.removeEventListener('abort', stop);
       // The caller stopped reading early (or the stream failed): stop generating.
@@ -158,7 +186,8 @@ export class WebLlmEngine implements Engine {
       initProgressCallback: (report: { progress: number }) =>
         onProgress(report.progress),
     };
-    const worker = this.#options.worker?.();
+    const { worker: createWorker = packageWorker } = this.#options;
+    const worker = createWorker === false ? undefined : createWorker();
     const loaded: Loaded = {
       worker,
       mlc: worker
@@ -182,11 +211,20 @@ export class WebLlmEngine implements Engine {
     return loaded;
   }
 
-  /** What `reload()` gets: the user's chat options, with the context size on top. */
+  /** What `reload()` gets: the native chat options, with the settings on top. */
   #chatOptions(): ChatOptions | undefined {
-    const { chatOptions, contextWindowSize } = this.#options;
-    if (contextWindowSize === undefined) return chatOptions;
-    return { ...chatOptions, context_window_size: contextWindowSize };
+    const { native, contextWindowSize, sampling } = this.#options;
+    if (contextWindowSize === undefined && sampling === undefined)
+      return native;
+    return {
+      ...native,
+      ...(contextWindowSize === undefined
+        ? {}
+        : { context_window_size: contextWindowSize }),
+      ...(sampling === undefined
+        ? {}
+        : { temperature: SAMPLING_TEMPERATURE[sampling] }),
+    };
   }
 
   /** WebLLM is large: it is imported on first use, once per engine. */
@@ -197,6 +235,16 @@ export class WebLlmEngine implements Engine {
     });
     return this.#library;
   }
+}
+
+/**
+ * The worker of this package. `new Worker(new URL(…, import.meta.url))` in one expression is
+ * the form Vite, webpack, esbuild (Angular) and Parcel find and bundle as a worker.
+ */
+function packageWorker(): Worker {
+  return new Worker(new URL('./web-llm-default.worker.js', import.meta.url), {
+    type: 'module',
+  });
 }
 
 async function free({ mlc, worker }: Loaded): Promise<void> {

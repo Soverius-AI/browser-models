@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { CopilotChat } from '@copilotkit/angular';
 import { injectBrowserModels } from '@soverius-ai/browser-models-angular';
-import { context7 } from './app.config';
+import { context7 } from './agent';
 import { registerDocsExamples } from './copilotkit-docs/register-docs-examples';
 import { ModelsPanel } from './models-panel';
 import { registerTripPlan } from './trip-plan';

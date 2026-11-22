@@ -1,0 +1,8 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "extends": ["../../../typedoc.base.json"],
+  "name": "@soverius-ai/browser-models-angular",
+  "entryPoints": ["src/index.ts"],
+  "tsconfig": "./tsconfig.lib.json",
+  "out": "../../../apps/docs/docs/api/browser-models-angular"
+}

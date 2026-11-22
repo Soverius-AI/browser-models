@@ -1,0 +1,10 @@
+{
+  "name": "agent-chat-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/agent-chat-e2e/src",
+  "projectType": "application",
+  "tags": [],
+  "implicitDependencies": ["agent-chat"],
+  "// targets": "to see all targets run: nx show project agent-chat-e2e --web",
+  "targets": {}
+}

@@ -20,8 +20,7 @@
             "input": "apps/angular-copilotkit/public"
           }
         ],
-        "styles": ["apps/angular-copilotkit/src/styles.css"],
-        "webWorkerTsConfig": "apps/angular-copilotkit/tsconfig.worker.json"
+        "styles": ["apps/angular-copilotkit/src/styles.css"]
       },
       "configurations": {
         "production": {
@@ -94,10 +93,7 @@
       ],
       "options": {
         "cwd": "{projectRoot}",
-        "commands": [
-          "ngc -p tsconfig.spec.json --noEmit",
-          "tsc -p tsconfig.worker.json --noEmit"
-        ],
+        "commands": ["ngc -p tsconfig.spec.json --noEmit"],
         "parallel": false
       }
     }

@@ -2,12 +2,33 @@ import Link from '@docusaurus/Link';
 import { useLocation } from '@docusaurus/router';
 import Layout from '@theme/Layout';
 import { useRef, useState } from 'react';
+import SourceCode from '../components/SourceCode';
+import { SOURCE_FILES } from '../source-files';
 
 const platforms = {
-  angular: { name: 'Angular', logo: 'angular', docs: '/docs/angular' },
-  react: { name: 'React', logo: 'react', docs: '/docs/react' },
-  vue: { name: 'Vue', logo: 'vuedotjs', docs: '/docs/vue' },
-  vanilla: { name: 'Vanilla', logo: 'typescript', docs: '/docs/vanilla' },
+  angular: {
+    name: 'Angular',
+    logo: 'angular',
+    docs: '/docs/frameworks/angular',
+  },
+  react: { name: 'React', logo: 'react', docs: '/docs/frameworks/react' },
+  vue: { name: 'Vue', logo: 'vuedotjs', docs: '/docs/frameworks/vue' },
+  vanilla: {
+    name: 'Vanilla',
+    logo: 'typescript',
+    docs: '/docs/agent/without-copilotkit',
+  },
+  agent: { name: 'Agent, no tools', logo: 'ag-ui', docs: '/docs/agent' },
+  engine: {
+    name: 'Engine only',
+    logo: 'webgpu',
+    docs: '/docs/engines/streaming',
+  },
+  assistant: {
+    name: 'Docs assistant',
+    logo: 'copilotkit',
+    docs: '/docs/examples/docs-assistant',
+  },
 } as const;
 
 type Platform = keyof typeof platforms;
@@ -30,13 +51,29 @@ function on(
 }
 
 const all = ['angular', 'react', 'vue', 'vanilla'] as const;
+/** The two examples without tool calling. */
+const plain = ['agent', 'engine'] as const;
 const copilotKit = ['angular', 'react', 'vue'] as const;
 
 const examples: readonly Example[] = [
   {
+    title: 'Ask the docs',
+    text: 'The model searches these docs with a tool of the agent, answers, and shows the page with a tool of the page.',
+    prompts: on(
+      ['assistant'],
+      'how do I check the Prompt API',
+      'search the docs for compaction',
+    ),
+  },
+  {
     title: 'Chat',
     text: 'Text streams from the model on your device.',
-    prompts: on(all, 'Hello'),
+    prompts: on([...all, ...plain], 'Hello'),
+  },
+  {
+    title: 'Thinking',
+    text: 'The model thinks in <think> tags first. Engine only: OutputParser splits it off; the agent sends it as REASONING events.',
+    prompts: on(plain, 'think about it'),
   },
   {
     title: 'Generative UI',
@@ -151,6 +188,8 @@ export default function Playground() {
   );
   const [query, setQuery] = useState('');
   const [devtools, setDevtools] = useState(false);
+  /** The running example, or its code. */
+  const [view, setView] = useState<'demo' | 'code'>('demo');
   const [events, setEvents] = useState<readonly AgentEvent[]>([]);
   const frame = useRef<HTMLIFrameElement>(null);
   /** A prompt to send once the example has reloaded with another query. */
@@ -192,7 +231,7 @@ export default function Playground() {
   return (
     <Layout
       title="Playground"
-      description="Try in-browser model agents in Angular, React, Vue and vanilla JS."
+      description="Try in-browser model agents in Angular, React, Vue and vanilla JS, and the engines on their own."
     >
       <main className="container margin-vert--lg">
         <h1>Playground</h1>
@@ -229,12 +268,32 @@ export default function Playground() {
               <i />
               <i />
               <span>{current.name} example · runs on your device</span>
+              <div className="playground__views" role="tablist">
+                {(['demo', 'code'] as const).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={id === view}
+                    className={`button button--sm ${id === view ? 'button--primary' : 'button--secondary'}`}
+                    onClick={() => setView(id)}
+                  >
+                    {id === 'demo' ? 'Demo' : 'Code'}
+                  </button>
+                ))}
+              </div>
             </div>
+            {view === 'code' && (
+              <div className="playground__code">
+                <SourceCode key={platform} files={SOURCE_FILES[platform]} />
+              </div>
+            )}
             <iframe
               key={platform + query + String(devtools)}
               ref={frame}
               title={`${current.name} example`}
               src={src}
+              hidden={view === 'code'}
               className="playground__frame"
               onLoad={() => {
                 listen();
@@ -243,7 +302,7 @@ export default function Playground() {
                 pending.current = undefined;
               }}
             />
-            {devtools && (
+            {devtools && view === 'demo' && (
               <ol className="playground__events" aria-label="Agent events">
                 {events.length === 0 && <li>Run an example to see events.</li>}
                 {events.map((event) => (
@@ -268,7 +327,10 @@ export default function Playground() {
                         key={prompt}
                         type="button"
                         className="button button--sm button--outline button--primary"
-                        onClick={() => run(example, prompt)}
+                        onClick={() => {
+                          setView('demo');
+                          run(example, prompt);
+                        }}
                       >
                         ▶ {prompt}
                       </button>

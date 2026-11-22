@@ -1,11 +1,15 @@
 /// <reference types="dom-chromium-ai" preserve="true" />
 
-import type {
-  Availability,
-  ChatMessage,
-  Engine,
-  GenerateRequest,
-  LoadOptions,
+import {
+  EngineKind,
+  type Availability,
+  type ChatMessage,
+  type Engine,
+  type EnginePart,
+  type GenerateRequest,
+  type LoadOptions,
+  type ModelSettings,
+  type Sampling,
 } from '../lib/engine.ts';
 import { SharedLoad } from './shared-load.ts';
 
@@ -14,13 +18,19 @@ export type LanguageModelApi = Pick<
   typeof LanguageModel,
   'availability' | 'create'
 >;
+/** The languages a session must handle, as the browser's Prompt API expects them. */
 export type LanguageModelExpectations = Pick<
   LanguageModelCreateCoreOptions,
   'expectedInputs' | 'expectedOutputs'
 >;
+/** A Prompt API session (`LanguageModel`). */
 export type LanguageModelSession = LanguageModel;
 
-export interface PromptApiOptions {
+/**
+ * Takes the same `ModelSettings` as the other engines, so one settings object fits all three.
+ * The browser sets the context size and the reply length: only `sampling` applies here.
+ */
+export interface PromptApiOptions extends ModelSettings {
   /** Languages of the conversation, for example `['en', 'de']`. Default `['en']`. */
   readonly languages?: readonly string[];
   /** The API to use. Defaults to the browser's global `LanguageModel`. */
@@ -34,6 +44,7 @@ export interface PromptApiOptions {
  */
 export class PromptApiEngine implements Engine {
   readonly id = 'prompt-api';
+  readonly kind = EngineKind.PromptApi;
   readonly supportsConstraint = true;
   readonly #languageModel: LanguageModelApi | undefined;
   readonly #expectations: LanguageModelExpectations;
@@ -41,6 +52,7 @@ export class PromptApiEngine implements Engine {
   /** The session of the last finished turn, kept for the next turn of the same conversation. */
   #cached: CachedSession | undefined;
   #contextWindowSize: number | undefined;
+  readonly #sampling: Sampling | undefined;
 
   constructor(options: PromptApiOptions = {}) {
     const languages = options.languages ?? ['en'];
@@ -49,6 +61,7 @@ export class PromptApiEngine implements Engine {
       expectedInputs: [{ type: 'text', languages: [...languages] }],
       expectedOutputs: [{ type: 'text', languages: [...languages] }],
     };
+    this.#sampling = options.sampling;
     this.#download = new SharedLoad(
       (onProgress, signal) => this.#startDownload(onProgress, signal),
       async () => undefined, // the browser keeps the model, there is nothing to free
@@ -63,6 +76,7 @@ export class PromptApiEngine implements Engine {
     return this.#contextWindowSize;
   }
 
+  /** What the browser answers for the configured languages; `unavailable` without the Prompt API. */
   async availability(): Promise<Availability> {
     const api = this.#api();
     return api ? api.availability(this.#expectations) : 'unavailable';
@@ -83,7 +97,7 @@ export class PromptApiEngine implements Engine {
     messages,
     constraint,
     signal,
-  }: GenerateRequest): AsyncGenerator<string> {
+  }: GenerateRequest): AsyncGenerator<EnginePart> {
     const last = messages.at(-1);
     if (last?.role !== 'user') {
       throw new Error(
@@ -101,6 +115,7 @@ export class PromptApiEngine implements Engine {
       ? previous.session
       : await this.#requiredApi().create({
           ...this.#expectations,
+          ...(this.#sampling ? { samplingMode: this.#sampling } : {}),
           initialPrompts: [...history] as NonNullable<
             LanguageModelCreateOptions['initialPrompts']
           >,
@@ -122,12 +137,18 @@ export class PromptApiEngine implements Engine {
         const { done, value } = await reader.read();
         if (done) break;
         reply += value;
-        yield value;
+        yield { type: 'text', text: value };
       }
       // An aborted stream normally fails by itself; make sure the caller always sees the abort.
       signal?.throwIfAborted();
       entry.history = [...history, last, { role: 'assistant', content: reply }];
       completed = true;
+      const totalTokens = session.contextUsage ?? session.inputUsage;
+      yield {
+        type: 'finish',
+        reason: 'stop',
+        ...(totalTokens === undefined ? {} : { usage: { totalTokens } }),
+      };
     } finally {
       entry.busy = false;
       // Keep only a finished session that is still the cached one; an interrupted session

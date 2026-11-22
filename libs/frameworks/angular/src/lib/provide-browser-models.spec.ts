@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import type { Availability, Engine } from '@soverius-ai/browser-models';
-import { BrowserModelsAgent } from '@soverius-ai/browser-models/agent';
+import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 import { injectBrowserModels } from './browser-models.ts';
 import {
   provideBrowserModels,
@@ -19,7 +19,7 @@ function engine(availability: Availability): Engine {
     },
     unload: async () => undefined,
     async *generate() {
-      yield 'hi';
+      yield { type: 'text' as const, text: 'hi' };
     },
   };
 }

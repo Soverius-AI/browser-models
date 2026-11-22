@@ -59,3 +59,4 @@ __screenshots__/
 # Docusaurus
 apps/docs/.docusaurus
 apps/docs/static/examples
+apps/docs/docs/api

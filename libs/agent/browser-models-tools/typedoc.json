@@ -1,0 +1,13 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "extends": ["../../../typedoc.base.json"],
+  "name": "@soverius-ai/browser-models-tools",
+  "entryPoints": [
+    "src/index.ts",
+    "src/mcp.ts",
+    "src/webmcp.ts",
+    "src/copilotkit.ts"
+  ],
+  "tsconfig": "./tsconfig.lib.json",
+  "out": "../../../apps/docs/docs/api/browser-models-tools"
+}

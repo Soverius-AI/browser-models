@@ -6,7 +6,14 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": []
+    "types": ["node"],
+    "allowImportingTsExtensions": true
   },
-  "include": ["docusaurus.config.ts", "sidebars.ts"]
+  "include": [
+    "docusaurus.config.ts",
+    "sidebars.ts",
+    "plugins/**/*.ts",
+    "src/source-files.ts",
+    "scripts/**/*.ts"
+  ]
 }

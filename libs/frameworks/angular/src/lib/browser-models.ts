@@ -6,17 +6,11 @@ import {
   signal,
   type Signal,
 } from '@angular/core';
-import {
-  ModelStore,
-  type BrowserModelsAgent,
-  type ModelState,
-} from '@soverius-ai/browser-models/agent';
+import { ModelStore, type ModelState } from '@soverius-ai/browser-models';
+import type { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 import { BROWSER_MODELS_AGENT } from './tokens.ts';
 
-export type {
-  ModelStatus,
-  StorageUse,
-} from '@soverius-ai/browser-models/agent';
+export type { ModelStatus, StorageUse } from '@soverius-ai/browser-models';
 
 /**
  * Model state as Angular signals, on top of the framework-neutral `ModelStore`.
