@@ -5,8 +5,8 @@ interface, and as [AG-UI](https://docs.ag-ui.com) agents. CopilotKit or any AG-U
 
 [Docs](https://browser-models.soverius.ai/docs) · [Playground](https://browser-models.soverius.ai/playground) · by [Soverius AI](https://soverius.ai) · [Newsletter](https://soverius.ai/newsletter) · MIT
 
-> Early stage. Working: the agent runtime, three engines (Prompt API, WebLLM, transformers.js), WebMCP and
-> MCP tool sources, and the Angular, React and Vue packages.
+> Early stage (0.x). Three layers, each its own package: engines, an AG-UI agent, tool calling. Take only
+> the layers you need.
 
 |                    |                                                                                              |
 | ------------------ | -------------------------------------------------------------------------------------------- |
@@ -17,6 +17,8 @@ interface, and as [AG-UI](https://docs.ag-ui.com) agents. CopilotKit or any AG-U
 | Tools              | local tools, frontend tools (e.g. CopilotKit), the page's WebMCP tools, MCP servers          |
 | Long conversations | compacted to fit the model's context: older turns become a summary, old tool results are cut |
 | Models on a device | explicit model selection, download with progress, list and delete downloaded models          |
+| Size               | minified ES modules; in an app 2.1 KB gzip (one engine) up to 20 KB (agent and tool calling) |
+| WebLLM             | runs in the package's own Web Worker, no worker file to write                                |
 
 ## Install
 
@@ -242,17 +244,17 @@ pnpm start:docs       # docs site with the playground, http://localhost:4400
 | `start:agent`     | `apps/agent-chat`         | 4205 |
 | `start:assistant` | `apps/docs-assistant`     | 4206 |
 
-| App                       | Port | Stack                                        | Shows                                                                                               |
-| ------------------------- | ---- | -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `apps/angular-copilotkit` | 4200 | Angular 22, `@copilotkit/angular` 0.6        | CopilotKit docs examples (`show_incident`, `getWeather`, `change_background`), streaming `planTrip` |
-| `apps/react-copilotkit`   | 4201 | React 19, `@copilotkit/react-core` 1.88      | CopilotKit docs examples (`addTodo`, `getWeather`), streaming `planTrip`                            |
-| `apps/vue-copilotkit`     | 4202 | Vue 3, `@copilotkit/vue` 1.88                | CopilotKit docs examples (`addTodo`, `getWeather`), streaming `planTrip`                            |
-| `apps/vanilla-agui`       | 4203 | plain `@ag-ui/client`, no CopilotKit         | `runAgent` loop with a frontend tool, a demo MCP server at `/mcp`, Context7 MCP with an API key     |
-| `apps/agent-chat`         | 4205 | `-agui` without tools, plain `@ag-ui/client` | the agent alone: thinking, model loading and compaction events, stop                                |
-| `apps/engine-chat`        | 4204 | only `@soverius-ai/browser-models`, no AG-UI | the engine alone: Prompt API check, model picker, streamed parts with token counts, stop            |
-| `apps/docs-assistant`     | 4206 | React 19, CopilotKit, all three layers       | these docs, asked by a model in your browser: search tool, page cards; "Ask the docs" on the site   |
+| App                       | Layers | Port | Stack                                        | Shows                                                                                               |
+| ------------------------- | ------ | ---- | -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `apps/engine-chat`        | 1      | 4204 | only `@soverius-ai/browser-models`, no AG-UI | the engine alone: Prompt API check, model picker, streamed parts with token counts, stop            |
+| `apps/agent-chat`         | 1–2    | 4205 | `-agui` without tools, plain `@ag-ui/client` | the agent alone: thinking, model loading and compaction events, stop                                |
+| `apps/vanilla-agui`       | 1–3    | 4203 | plain `@ag-ui/client`, no CopilotKit         | `runAgent` loop with a frontend tool, a demo MCP server at `/mcp`, Context7 MCP with an API key     |
+| `apps/angular-copilotkit` | 1–3    | 4200 | Angular 22, `@copilotkit/angular` 0.6        | CopilotKit docs examples (`show_incident`, `getWeather`, `change_background`), streaming `planTrip` |
+| `apps/react-copilotkit`   | 1–3    | 4201 | React 19, `@copilotkit/react-core` 1.88      | CopilotKit docs examples (`addTodo`, `getWeather`), streaming `planTrip`                            |
+| `apps/vue-copilotkit`     | 1–3    | 4202 | Vue 3, `@copilotkit/vue` 1.88                | CopilotKit docs examples (`addTodo`, `getWeather`), streaming `planTrip`                            |
+| `apps/docs-assistant`     | 1–3    | 4206 | React 19, CopilotKit                         | these docs, asked by a model in your browser: search tool, page cards; "Ask the docs" on the site   |
 
-One example per layer: `engine-chat` (engines), `agent-chat` (plus the AG-UI agent), the others (plus tool calling). All examples share:
+All examples share:
 
 - a model picker: Gemini Nano, Qwen3 and Gemma 4 on WebLLM and transformers.js;
 - `?model=demo`: a scripted engine that needs no download (used by the e2e tests and the playground);
@@ -274,26 +276,37 @@ The CopilotKit examples also have a "Models on this device" panel that lists and
 
 Nx monorepo, TypeScript and ESM throughout.
 
-| Folder                            | Content                                            |
-| --------------------------------- | -------------------------------------------------- |
-| `libs/agent/browser-models`       | `@soverius-ai/browser-models`: engines             |
-| `libs/agent/browser-models-agui`  | `@soverius-ai/browser-models-agui`: AG-UI agent    |
-| `libs/agent/browser-models-tools` | `@soverius-ai/browser-models-tools`: tool calling  |
-| `libs/frameworks/*`               | `@soverius-ai/browser-models-angular\|react\|vue`  |
-| `libs/examples/shared`            | private: demo engine, model list, tools            |
-| `apps/*`                          | the examples, their Playwright e2e tests, the docs |
+| Folder                            | Content                                                                             |
+| --------------------------------- | ----------------------------------------------------------------------------------- |
+| `libs/agent/browser-models`       | `@soverius-ai/browser-models`: engines                                              |
+| `libs/agent/browser-models-agui`  | `@soverius-ai/browser-models-agui`: AG-UI agent                                     |
+| `libs/agent/browser-models-tools` | `@soverius-ai/browser-models-tools`: tool calling                                   |
+| `libs/frameworks/*`               | `@soverius-ai/browser-models-angular\|react\|vue`                                   |
+| `libs/examples/shared`            | private: demo engine, model list, tools                                             |
+| `libs/examples/snippets`          | private: the code in this README and the docs, tested against a scripted model      |
+| `apps/*`                          | the examples, their Playwright e2e tests, the docs                                  |
+| `tools/library-build.ts`          | builds a package: esbuild (minified ES modules, shared chunks) and tsc declarations |
 
 ```bash
 pnpm install
 pnpm exec playwright install chromium
-pnpm nx run-many -t lint test typecheck build
+pnpm nx run-many -t lint test typecheck build publint
 pnpm nx run-many -t e2e
-pnpm start:docs   # docs site with the playground, port 4400
+pnpm nx run docs:check-code   # typechecks every code block of the docs and this README
+pnpm start:docs               # docs site with the playground, port 4400
 ```
+
+Packages build into `dist/libs/…`; the Angular package with ng-packagr.
 
 | Tag           | What it starts                                                                                            |
 | ------------- | --------------------------------------------------------------------------------------------------------- |
-| `v0.1.0`      | publishes the six packages to npm, and a GitHub release; must match the version in the package.json files |
+| `v<version>`  | publishes the six packages to npm, and a GitHub release; must match the version in the package.json files |
 | `docs-<name>` | rebuilds the docs site and playground from the tip of `main`                                              |
 
-Cut a release: `pnpm nx release version 0.2.0`, commit, then tag `v0.2.0` and push both.
+Cut a release:
+
+```bash
+pnpm nx release version 0.3.0   # all six package.json files and the pins between them
+git commit -am "chore(release): 0.3.0"
+git tag v0.3.0 && git push origin main v0.3.0
+```
