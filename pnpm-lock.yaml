@@ -191,6 +191,9 @@ importers:
       '@testing-library/react':
         specifier: 16.3.0
         version: 16.3.0(@testing-library/dom@10.4.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@types/dom-chromium-ai':
+        specifier: ^0.0.18
+        version: 0.0.18
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
@@ -7352,6 +7355,12 @@ packages:
     resolution:
       {
         integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==,
+      }
+
+  '@types/dom-chromium-ai@0.0.18':
+    resolution:
+      {
+        integrity: sha512-/ZITAMdViQlLmEs56d/ET9qJ42EfnrBrLw5gRB4p0raDoavGDacqP9VITK8wNM0f9bPmnddHZeJ+FWIkWi6JlQ==,
       }
 
   '@types/esquery@1.5.4':
@@ -26873,6 +26882,8 @@ snapshots:
       '@types/ms': 2.1.0
 
   '@types/deep-eql@4.0.2': {}
+
+  '@types/dom-chromium-ai@0.0.18': {}
 
   '@types/esquery@1.5.4':
     dependencies:
