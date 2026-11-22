@@ -17,6 +17,8 @@ import { closeJson } from './lib/partial-json.ts';
 /** The tool CopilotKit registers when `openGenerativeUI` is set, and the activity it renders. */
 const TOOL_NAME = 'generateSandboxedUi';
 const ACTIVITY_TYPE = 'open-generative-ui';
+/** How much more HTML is worth an update while the call streams. */
+const HTML_STEP = 400;
 
 /** The tool calls in a `MESSAGES_SNAPSHOT`, as far as this module reads them. */
 function correctedCalls(
@@ -72,51 +74,64 @@ export class OpenGenerativeUi extends Middleware {
     input: RunAgentInput,
     next: AbstractAgent,
   ): ReturnType<Middleware['run']> {
-    const calls = new Map<string, SandboxCall>();
+    const calls = new SandboxCalls();
     return this.runNext(input, next).pipe(
-      concatMap((event) => from(withActivity(event, calls))),
+      concatMap((event) => from(calls.handle(event))),
     );
   }
 }
 
-/** The event, with an activity update next to it when it belongs to a sandbox tool call. */
-function withActivity(
-  event: BaseEvent,
-  calls: Map<string, SandboxCall>,
-): BaseEvent[] {
-  const { type, toolCallId, toolCallName, delta } = event as BaseEvent & {
-    toolCallId?: string;
-    toolCallName?: string;
-    delta?: string;
-  };
-  if (type === EventType.MESSAGES_SNAPSHOT) {
-    // The agent corrects a streamed call this way after repairing it: show the corrected page.
-    const updates = correctedCalls(event).flatMap((corrected) => {
-      const open = calls.get(corrected.id);
-      open?.replace(corrected.arguments);
-      return open ? [open.activity(false)] : [];
-    });
-    return [event, ...updates];
-  }
-  if (!toolCallId) return [event];
+/** The sandbox tool calls of one run, and the activity updates for them. */
+class SandboxCalls {
+  readonly #calls = new Map<string, SandboxCall>();
+  /** The calls in the snapshot the agent just sent; undefined after any other event. */
+  #snapshotCalls: ReadonlySet<string> | undefined;
 
-  if (type === EventType.TOOL_CALL_START && toolCallName === TOOL_NAME) {
-    const call = new SandboxCall(toolCallId);
-    calls.set(toolCallId, call);
-    // The activity goes first, so the sandbox sits above the tool call in the chat.
-    return [call.activity(false), event];
+  /** The event, with an activity update next to it when it belongs to a sandbox tool call. */
+  handle(event: BaseEvent): BaseEvent[] {
+    const snapshotCalls = this.#snapshotCalls;
+    this.#snapshotCalls = undefined;
+    const { type, toolCallId, toolCallName, delta } = event as BaseEvent & {
+      toolCallId?: string;
+      toolCallName?: string;
+      delta?: string;
+    };
+    if (type === EventType.MESSAGES_SNAPSHOT) {
+      const corrected = correctedCalls(event);
+      this.#snapshotCalls = new Set(corrected.map(({ id }) => id));
+      // The agent corrects a streamed call this way after repairing it: show the corrected page.
+      const updates = corrected.flatMap(({ id, arguments: json }) => {
+        const open = this.#calls.get(id);
+        open?.replace(json);
+        return open ? [open.activity('generating')] : [];
+      });
+      return [event, ...updates];
+    }
+    if (!toolCallId) return [event];
+
+    if (type === EventType.TOOL_CALL_START && toolCallName === TOOL_NAME) {
+      const call = new SandboxCall(toolCallId);
+      this.#calls.set(toolCallId, call);
+      // The activity goes first, so the sandbox sits above the tool call in the chat.
+      return [call.activity('generating'), event];
+    }
+    const call = this.#calls.get(toolCallId);
+    if (!call) return [event];
+    if (type === EventType.TOOL_CALL_ARGS) {
+      call.write(delta ?? '');
+      const update = call.progress();
+      return update ? [event, update] : [event];
+    }
+    if (type === EventType.TOOL_CALL_END) {
+      this.#calls.delete(toolCallId);
+      // The agent takes a call back (cut off, or not repairable) with a snapshot without it,
+      // then ends it. Its script is incomplete: it must not run.
+      const withdrawn =
+        snapshotCalls !== undefined && !snapshotCalls.has(toolCallId);
+      return [call.activity(withdrawn ? 'withdrawn' : 'done'), event];
+    }
+    return [event];
   }
-  const call = calls.get(toolCallId);
-  if (!call) return [event];
-  if (type === EventType.TOOL_CALL_ARGS) {
-    call.write(delta ?? '');
-    return [event, call.activity(false)];
-  }
-  if (type === EventType.TOOL_CALL_END) {
-    calls.delete(toolCallId);
-    return [call.activity(true), event];
-  }
-  return [event];
 }
 
 /** The arguments of one `generateSandboxedUi` call while they stream in. */
@@ -127,6 +142,8 @@ class SandboxCall {
   /** The HTML in the pieces it arrived in: the renderer appends each new piece. */
   readonly #html: string[] = [];
   #htmlLength = 0;
+  /** What the last update showed, to send the next one only when something visible changed. */
+  #shown = { keys: 0, html: 0, expressions: 0 };
 
   constructor(toolCallId: string) {
     this.#messageId = `${toolCallId}-activity`;
@@ -134,6 +151,31 @@ class SandboxCall {
 
   write(delta: string): void {
     this.#json += delta;
+  }
+
+  /**
+   * An update while the call streams, or undefined when nothing visible changed: a parameter
+   * started or finished, an expression completed, or {@link HTML_STEP} more characters of HTML.
+   * Every update carries the whole page so far, and the client checks and stores each one, so
+   * one per token would grow with the square of the page.
+   */
+  progress(): BaseEvent | undefined {
+    const written = this.#read();
+    const args = sandboxArguments(written);
+    const now = {
+      keys: Object.keys(written).length,
+      html: args.html?.length ?? 0,
+      expressions: args.jsExpressions?.length ?? 0,
+    };
+    const shown = this.#shown;
+    if (
+      now.keys === shown.keys &&
+      now.expressions === shown.expressions &&
+      now.html - shown.html < HTML_STEP
+    )
+      return undefined;
+    this.#shown = now;
+    return this.activity('generating');
   }
 
   /** Replaces what was streamed with the complete, repaired arguments. */
@@ -147,8 +189,14 @@ class SandboxCall {
     }
   }
 
-  /** The activity message with everything that has arrived. `done`: the call is complete. */
-  activity(done: boolean): BaseEvent {
+  /**
+   * The activity message with everything that has arrived. `done`: the call is complete.
+   * `withdrawn`: the agent took the call back; the page stays as far as it got, its script
+   * does not run.
+   */
+  activity(state: 'generating' | 'done' | 'withdrawn'): BaseEvent {
+    const done = state !== 'generating';
+    const scripts = state !== 'withdrawn';
     const written = this.#read();
     const args = sandboxArguments(written);
     // The model writes the parameters in order: all but the last one are finished.
@@ -173,17 +221,20 @@ class SandboxCall {
         ...(finished('css') && { css: args.css, cssComplete: true }),
         ...(this.#html.length > 0 && { html: [...this.#html] }),
         ...(finished('html') && { htmlComplete: true }),
-        ...(finished('jsFunctions') && {
-          jsFunctions: args.jsFunctions,
-          jsFunctionsComplete: true,
-        }),
+        ...(scripts &&
+          finished('jsFunctions') && {
+            jsFunctions: args.jsFunctions,
+            jsFunctionsComplete: true,
+          }),
         // An expression runs once it is complete: the last one may still be growing.
-        ...(keys.includes('jsExpressions') && {
-          jsExpressions: finished('jsExpressions')
-            ? expressions
-            : expressions.slice(0, -1),
-        }),
-        ...(finished('jsExpressions') && { jsExpressionsComplete: true }),
+        ...(scripts &&
+          keys.includes('jsExpressions') && {
+            jsExpressions: finished('jsExpressions')
+              ? expressions
+              : expressions.slice(0, -1),
+          }),
+        ...(scripts &&
+          finished('jsExpressions') && { jsExpressionsComplete: true }),
       },
     } as BaseEvent;
   }

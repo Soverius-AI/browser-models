@@ -203,6 +203,37 @@ describe('AgentRun', () => {
     expect(system).not.toContain('<tool name>');
   });
 
+  it('shows the simplest tool in the example, never a large one such as generateSandboxedUi', async () => {
+    const engine = scriptedEngine('Hi');
+    const sandbox: Tool = {
+      name: 'generateSandboxedUi',
+      description: 'Writes a page',
+      parameters: {
+        type: 'object',
+        properties: {
+          initialHeight: { type: 'number' },
+          html: { type: 'string' },
+          jsFunctions: { type: 'string' },
+        },
+      },
+    };
+    await collect(
+      run({
+        engine,
+        input: input([sandbox]),
+        localTools: [{ ...weatherTool, execute: async () => 'sunny' }],
+      }),
+    );
+
+    const system = engine.requests[0]?.messages
+      .filter(({ role }) => role === 'system')
+      .map(({ content }) => content)
+      .join('\n');
+    expect(system).toContain(
+      '```tool_call\n{"name":"getWeather","arguments":{"city":"…"}}\n```',
+    );
+  });
+
   it('repairs a broken call and reports the repair', async () => {
     const broken =
       "```tool_call\n{name: 'get_weather', arguments: {city: 'Vienna'}\n```";

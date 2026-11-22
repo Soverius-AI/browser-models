@@ -189,10 +189,12 @@ class ActiveTools implements RunTools {
       )
       .join('\n');
     // A real call, not a template: small models copy a placeholder like "<tool name>" as it is.
-    const [first] = tools;
+    // They copy the example's values too, so it shows the simplest tool, never one such as
+    // generateSandboxedUi whose copied example would be a broken page.
+    const simplest = ActiveTools.#simplest(tools);
     const example = JSON.stringify({
-      name: first?.name ?? 'toolName',
-      arguments: ActiveTools.#exampleArguments(first?.parameters),
+      name: simplest?.name ?? 'toolName',
+      arguments: ActiveTools.#exampleArguments(simplest?.parameters),
     });
     return [
       'You can call tools. To call one, reply with a block like this and nothing after it:',
@@ -206,19 +208,43 @@ class ActiveTools implements RunTools {
     ].join('\n');
   }
 
-  /** Example arguments for a tool's schema: a value of the right type for each property. */
-  static #exampleArguments(
+  /** The tool with the fewest parameters; the first of those. */
+  static #simplest(tools: readonly ToolSpec[]): ToolSpec | undefined {
+    const count = (tool: ToolSpec) =>
+      Object.keys(ActiveTools.#properties(tool.parameters)).length;
+    return tools.reduce<ToolSpec | undefined>(
+      (best, tool) => (!best || count(tool) < count(best) ? tool : best),
+      undefined,
+    );
+  }
+
+  static #properties(
     schema: JsonSchema | undefined,
-  ): Record<string, unknown> {
-    const properties = (schema?.['properties'] ?? {}) as Record<
+  ): Record<
+    string,
+    { readonly type?: unknown; readonly enum?: readonly unknown[] }
+  > {
+    return (schema?.['properties'] ?? {}) as Record<
       string,
       { readonly type?: unknown; readonly enum?: readonly unknown[] }
     >;
+  }
+
+  /** Example arguments: a value of the right type for each required parameter. */
+  static #exampleArguments(
+    schema: JsonSchema | undefined,
+  ): Record<string, unknown> {
+    const required = schema?.['required'];
+    const names = Array.isArray(required) ? required.map(String) : [];
+    const properties = ActiveTools.#properties(schema);
     return Object.fromEntries(
-      Object.entries(properties).map(([key, property]) => [
-        key,
-        property.enum?.[0] ?? EXAMPLE_VALUES[String(property.type)] ?? '…',
-      ]),
+      names.map((key) => {
+        const property = properties[key];
+        return [
+          key,
+          property?.enum?.[0] ?? EXAMPLE_VALUES[String(property?.type)] ?? '…',
+        ];
+      }),
     );
   }
 }

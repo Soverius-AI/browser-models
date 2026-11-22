@@ -103,8 +103,9 @@ describe('OpenGenerativeUi', () => {
   });
 
   it('reports the HTML piece by piece while the model writes it', async () => {
+    const long = { ...page, html: '<p>A row of the page.</p>'.repeat(80) };
     const all = activities(
-      await run(toolCall('generateSandboxedUi', page, 12)),
+      await run(toolCall('generateSandboxedUi', long, 12)),
     );
     const writingHtml = all.filter(
       ({ content }) => content.html && !content.htmlComplete,
@@ -118,8 +119,20 @@ describe('OpenGenerativeUi', () => {
     );
     expect(lengths).toEqual([...lengths].sort((a, b) => a - b));
     expect(
-      page.html.startsWith(writingHtml[0]?.content.html?.join('') ?? '-'),
+      long.html.startsWith(writingHtml[0]?.content.html?.join('') ?? '-'),
     ).toBe(true);
+  });
+
+  it('sends an update per visible change, not per token', async () => {
+    const long = { ...page, html: '<p>A row of the page.</p>'.repeat(80) };
+    const events = await run(toolCall('generateSandboxedUi', long, 4));
+    const deltas = events.filter(
+      ({ type }) => type === EventType.TOOL_CALL_ARGS,
+    ).length;
+
+    // 2,000 characters of HTML in pieces of 400, plus one update per parameter.
+    expect(deltas).toBeGreaterThan(500);
+    expect(activities(events).length).toBeLessThan(20);
   });
 
   it('runs an expression only once it is complete', async () => {
@@ -184,5 +197,35 @@ describe('OpenGenerativeUi', () => {
       jsExpressions: page.jsExpressions,
     });
     expect(last?.html?.join('')).toBe(page.html);
+  });
+
+  it('does not run the script of a call the agent takes back, such as one cut off', async () => {
+    // The model stopped in the middle of jsFunctions: the agent removes the call with a
+    // snapshot without it, then ends it.
+    const cut = JSON.stringify(page).slice(
+      0,
+      JSON.stringify(page).indexOf('{}'),
+    );
+    const deltas = cut.match(/.{1,12}/gs) ?? [];
+    const events = await run([
+      {
+        type: EventType.TOOL_CALL_START,
+        toolCallId: 'call-1',
+        toolCallName: 'generateSandboxedUi',
+      },
+      ...deltas.map((delta) => ({
+        type: EventType.TOOL_CALL_ARGS,
+        toolCallId: 'call-1',
+        delta,
+      })),
+      { type: EventType.MESSAGES_SNAPSHOT, messages: [] },
+      { type: EventType.TOOL_CALL_END, toolCallId: 'call-1' },
+    ] as BaseEvent[]);
+
+    const last = activities(events).at(-1)?.content;
+    expect(last).toMatchObject({ generating: false, htmlComplete: true });
+    expect(last?.html?.join('')).toBe(page.html);
+    expect(last).not.toHaveProperty('jsFunctions');
+    expect(last).not.toHaveProperty('jsExpressions');
   });
 });
