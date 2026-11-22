@@ -1,10 +1,10 @@
 {
   "name": "@soverius-ai/browser-models-angular",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "peerDependencies": {
     "@angular/core": "^22.2.0",
-    "@soverius-ai/browser-models": "0.2.1",
-    "@soverius-ai/browser-models-agui": "0.2.1"
+    "@soverius-ai/browser-models": "0.2.2",
+    "@soverius-ai/browser-models-agui": "0.2.2"
   },
   "sideEffects": false,
   "license": "MIT",

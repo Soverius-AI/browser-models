@@ -1,6 +1,6 @@
 {
   "name": "@soverius-ai/browser-models-tools",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "main": "./index.js",
   "types": "./index.d.ts",
@@ -13,8 +13,8 @@
     "jsonrepair": "^3.15.0"
   },
   "peerDependencies": {
-    "@soverius-ai/browser-models": "0.2.1",
-    "@soverius-ai/browser-models-agui": "0.2.1",
+    "@soverius-ai/browser-models": "0.2.2",
+    "@soverius-ai/browser-models-agui": "0.2.2",
     "@ag-ui/client": "^1.0.0",
     "rxjs": "^7.8.0"
   },
