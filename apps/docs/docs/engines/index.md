@@ -65,9 +65,19 @@ const engine =
 | `downloading`    | a download runs                                                      |
 | `unavailable`    | not in this browser, on this device, or for these languages          |
 
-## All engines by kind
+## Bundle cost per entry
 
-For apps that install both engine libraries:
+| Import                                      | App JS (gzip) | Built, downloaded on load                                         | Needs installed             |
+| ------------------------------------------- | ------------- | ----------------------------------------------------------------- | --------------------------- |
+| `PromptApiEngine` from `/prompt-api`        | 1.4 KB        | none                                                              | none                        |
+| `TransformersJsEngine` from `/transformers` | 3.1 KB        | transformers.js 160 KB, ONNX Runtime wasm 6.4 MB                  | `@huggingface/transformers` |
+| `WebLlmEngine` from `/web-llm`              | 2.4 KB        | WebLLM worker 2.1 MB (in-page WebLLM 2.1 MB with `worker: false`) | `@mlc-ai/web-llm`           |
+| `Engines.create` from `/engines`            | 4.6 KB        | all of the above                                                  | both                        |
+| `PromptApiEngine` from `/engines`           | 1.4 KB        | none, but the ONNX wasm (6.4 MB) lands in `dist`                  | both                        |
+
+Vite 8 app build, minified, all sizes gzip. One engine: import it from its own entry. `/engines`: only when the kind is picked at run time.
+
+## All engines by kind
 
 ```ts
 import {

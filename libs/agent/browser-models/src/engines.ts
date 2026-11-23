@@ -1,7 +1,9 @@
 /**
- * `@soverius-ai/browser-models/engines`: all three engines, created by `EngineKind`. Needs both engine libraries.
+ * `@soverius-ai/browser-models/engines`: all three engines, created by `EngineKind`, for apps that
+ * pick the engine at run time. The app's build needs `@mlc-ai/web-llm` and
+ * `@huggingface/transformers` installed, even for one engine: import that one from its own entry.
  *
- * @module all-engines
+ * @module engines
  */
 import { EngineKind } from './lib/engine.ts';
 import {
@@ -47,9 +49,9 @@ const factories: Factories = {
 };
 
 /**
- * Creates any engine of this library by its kind, for apps that install all three engine
- * libraries. Apps that use fewer import the engine classes from their own entry points, so
- * the other libraries need not be installed.
+ * Creates any engine of this library by its kind. The kind is a run-time value, so the bundle
+ * keeps all three engine classes and the build emits both engine libraries as lazy chunks; each
+ * library downloads only when an engine of its kind loads.
  *
  * ```ts
  * Engines.create(EngineKind.WebLlm, 'gemma-4-E2B-it-q4f16_1-MLC', { contextWindowSize: 16384 });
@@ -57,6 +59,10 @@ const factories: Factories = {
  * ```
  */
 export class Engines {
+  private constructor() {
+    // Only `create`: nothing to construct.
+  }
+
   /** A new engine of `kind`, with that engine's own constructor arguments. */
   static create<Kind extends EngineKind>(
     kind: Kind,

@@ -66,6 +66,10 @@ const config: Config = {
           { from: '/docs/angular', to: '/docs/frameworks/angular' },
           { from: '/docs/react', to: '/docs/frameworks/react' },
           { from: '/docs/vue', to: '/docs/frameworks/vue' },
+          {
+            from: '/docs/api/browser-models/all-engines',
+            to: '/docs/api/browser-models/engines',
+          },
         ],
       },
     ],
