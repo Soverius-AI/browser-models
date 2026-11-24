@@ -1,6 +1,6 @@
 {
   "name": "@soverius-ai/browser-models-react",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "types": "./index.d.ts",
   "exports": {
     ".": {
@@ -17,8 +17,8 @@
   "description": "React hooks for @soverius-ai/browser-models-agui: model state and debugger wiring.",
   "peerDependencies": {
     "react": "^19.0.0",
-    "@soverius-ai/browser-models": "0.2.2",
-    "@soverius-ai/browser-models-agui": "0.2.2"
+    "@soverius-ai/browser-models": "0.3.0",
+    "@soverius-ai/browser-models-agui": "0.3.0"
   },
   "module": "./index.js",
   "repository": {
