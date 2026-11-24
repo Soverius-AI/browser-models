@@ -88,13 +88,30 @@ for await (const part of agent.run('What time is it?')) {
 
 ```ts
 import { OutputParser } from '@soverius-ai/browser-models';
+import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
+import { ToolCallingAgent } from '@soverius-ai/browser-models-tools';
 
-// With `tools: [setBackground]`: the caller runs the call and answers it with the next run.
+// A tool without execute: the caller runs the call and answers it with the next run.
+const agent = new ToolCallingAgent({
+  engine: new PromptApiEngine(),
+  tools: [
+    {
+      name: 'setBackground',
+      description: 'Sets the background color of the page.',
+      parameters: {
+        type: 'object',
+        properties: { color: { type: 'string' } },
+        required: ['color'],
+      },
+    },
+  ],
+});
+
 let input = 'Make it blue';
 while (input) {
   let next = '';
   for await (const part of agent.run(input)) {
-    if (part.type === 'text') output.append(part.text);
+    if (part.type === 'text') document.body.append(part.text);
     if (part.type === 'tool-call' && part.result === undefined) {
       document.body.style.background = String(part.call.arguments['color']);
       next = OutputParser.toolResult(part.call.name, 'done');
