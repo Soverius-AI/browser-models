@@ -63,11 +63,6 @@ export default [
     },
   },
   {
-    // The specs of tool calling also run it inside the AG-UI agent, one layer up.
-    files: ['libs/agent/browser-models-tools/src/**/*.spec.ts'],
-    rules: { '@nx/enforce-module-boundaries': 'off' },
-  },
-  {
     files: [
       '**/*.ts',
       '**/*.tsx',

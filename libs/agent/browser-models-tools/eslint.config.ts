@@ -3,6 +3,11 @@ import baseConfig from '../../../eslint.config.ts';
 export default [
   ...baseConfig,
   {
+    // The specs also run tool calling inside the AG-UI agent, one layer up.
+    files: ['src/**/*.spec.ts'],
+    rules: { '@nx/enforce-module-boundaries': 'off' },
+  },
+  {
     files: ['**/*.json'],
     rules: {
       '@nx/dependency-checks': [
