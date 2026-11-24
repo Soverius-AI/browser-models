@@ -176,7 +176,7 @@ export class AgentRun {
             this.#open.delete(streamed);
           }
           // Tell the model what was wrong and let it try again in the next step.
-          assistantTurn.push('```tool_call\n' + raw + '\n```');
+          assistantTurn.push(OutputParser.toolCall(raw));
           results.push(toolResultBlock('error', repaired.error));
           continue;
         }

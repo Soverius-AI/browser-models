@@ -100,6 +100,7 @@ function initializeChart() {
  * browser has a pattern to follow.
  */
 export const sandboxDesignSkill = `Rules for generateSandboxedUi. Keep the page small.
+- Use it only when the user asks you to build a page, an app or a chart. Never for what another tool already shows, such as the weather.
 - css: a few plain rules.
 - html: plain HTML, single quotes for attributes.
 - jsFunctions: define EVERY function you call. Never leave it empty when jsExpressions calls a function.

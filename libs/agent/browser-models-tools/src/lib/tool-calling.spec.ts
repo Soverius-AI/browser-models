@@ -16,6 +16,7 @@ import {
   type CompactionStatus,
   type RunOptions,
 } from '@soverius-ai/browser-models-agui';
+import { ScriptedEngine } from '../testing/scripted-engine.ts';
 import { ToolCalling, type ToolCallingOptions } from './tool-calling.ts';
 import type { LocalTool } from './tools.ts';
 
@@ -32,27 +33,6 @@ function run({
     ...(repairHook ? { repairHook } : {}),
   });
   return new AgentRun({ ...options, tools }).events();
-}
-
-/** An engine that replies with scripted text, split into small chunks like a real stream. */
-function scriptedEngine(
-  ...replies: string[]
-): Engine & { requests: GenerateRequest[] } {
-  const requests: GenerateRequest[] = [];
-  return {
-    id: 'scripted',
-    supportsConstraint: false,
-    requests,
-    availability: async () => 'available',
-    load: async () => undefined,
-    unload: async () => undefined,
-    async *generate(request) {
-      requests.push(request);
-      const reply = replies[requests.length - 1] ?? '';
-      for (let i = 0; i < reply.length; i += 4)
-        yield { type: 'text', text: reply.slice(i, i + 4) };
-    },
-  };
 }
 
 function input(tools: Tool[] = []): RunAgentInput {
@@ -74,7 +54,7 @@ async function collect(events: AsyncIterable<AgUiEvent>): Promise<AgUiEvent[]> {
 /** An engine that replies with exactly these fragments. */
 function fragmentEngine(...fragments: string[]): Engine {
   return {
-    ...scriptedEngine(),
+    ...new ScriptedEngine(),
     async *generate() {
       for (const text of fragments) yield { type: 'text' as const, text };
     },
@@ -129,7 +109,7 @@ const call =
 describe('AgentRun', () => {
   it('streams a text answer', async () => {
     const events = await collect(
-      run({ engine: scriptedEngine('It is sunny.'), input: input() }),
+      run({ engine: new ScriptedEngine('It is sunny.'), input: input() }),
     );
 
     expect(events.map((event) => event.type)).toEqual([
@@ -146,7 +126,7 @@ describe('AgentRun', () => {
   });
 
   it('emits a frontend tool call and ends the run, so the client can run the tool', async () => {
-    const engine = scriptedEngine(call);
+    const engine = new ScriptedEngine(call);
     const events = await collect(run({ engine, input: input([weatherTool]) }));
 
     const deltas = argsDeltas(events);
@@ -162,7 +142,7 @@ describe('AgentRun', () => {
   });
 
   it('runs a local tool and continues with its result', async () => {
-    const engine = scriptedEngine(call, 'It is 21 °C in Vienna.');
+    const engine = new ScriptedEngine(call, 'It is 21 °C in Vienna.');
     const getWeather: LocalTool<{ city: string }> = {
       ...weatherTool,
       execute: async ({ city }) => ({ city, celsius: 21 }),
@@ -184,7 +164,7 @@ describe('AgentRun', () => {
   });
 
   it('shows the model a real call of an available tool, not a template to copy', async () => {
-    const engine = scriptedEngine('Hi');
+    const engine = new ScriptedEngine('Hi');
     await collect(
       run({
         engine,
@@ -204,7 +184,7 @@ describe('AgentRun', () => {
   });
 
   it('shows the simplest tool in the example, never a large one such as generateSandboxedUi', async () => {
-    const engine = scriptedEngine('Hi');
+    const engine = new ScriptedEngine('Hi');
     const sandbox: Tool = {
       name: 'generateSandboxedUi',
       description: 'Writes a page',
@@ -238,7 +218,7 @@ describe('AgentRun', () => {
     const broken =
       "```tool_call\n{name: 'get_weather', arguments: {city: 'Vienna'}\n```";
     const events = await collect(
-      run({ engine: scriptedEngine(broken), input: input([weatherTool]) }),
+      run({ engine: new ScriptedEngine(broken), input: input([weatherTool]) }),
     );
 
     expect(
@@ -257,7 +237,7 @@ describe('AgentRun', () => {
   it('streams thinking as reasoning events before the answer', async () => {
     const events = await collect(
       run({
-        engine: scriptedEngine('<think>Easy.</think>\n\nIt is sunny.'),
+        engine: new ScriptedEngine('<think>Easy.</think>\n\nIt is sunny.'),
         input: input(),
       }),
     );
@@ -278,7 +258,7 @@ describe('AgentRun', () => {
   it('ignores thinking in the answer to a re-ask', async () => {
     const missingCity =
       '```tool_call\n{"name": "getWeather", "arguments": {}}\n```';
-    const engine = scriptedEngine(
+    const engine = new ScriptedEngine(
       missingCity,
       '<think>Need a city.</think>{"city": "Graz"}',
     );
@@ -291,7 +271,7 @@ describe('AgentRun', () => {
 
   it('reports model loading as an AG-UI activity before the answer', async () => {
     const engine: Engine = {
-      ...scriptedEngine('Hi.'),
+      ...new ScriptedEngine('Hi.'),
       load: async ({ onProgress } = {}) => {
         onProgress?.(0.5);
         onProgress?.(0.501); // same whole percent: no extra event
@@ -315,7 +295,7 @@ describe('AgentRun', () => {
 
   it('adds no activity events when the model is already loaded', async () => {
     const events = await collect(
-      run({ engine: scriptedEngine('Hi.'), input: input() }),
+      run({ engine: new ScriptedEngine('Hi.'), input: input() }),
     );
     expect(
       events.some((event) => event.type === EventType.ACTIVITY_SNAPSHOT),
@@ -325,7 +305,7 @@ describe('AgentRun', () => {
   it('ends with RUN_ERROR when the run is stopped', async () => {
     const abort = new AbortController();
     const engine: Engine = {
-      ...scriptedEngine(),
+      ...new ScriptedEngine(),
       // eslint-disable-next-line require-yield
       async *generate() {
         abort.abort();
@@ -343,7 +323,7 @@ describe('AgentRun', () => {
   });
 
   it('stops after maxSteps model calls', async () => {
-    const engine = scriptedEngine(call, call, call);
+    const engine = new ScriptedEngine(call, call, call);
     const loop: LocalTool = { ...weatherTool, execute: async () => 'again' };
     const events = await collect(
       run({ engine, input: input(), localTools: [loop], maxSteps: 2 }),
@@ -356,7 +336,7 @@ describe('AgentRun', () => {
   it('runs local tools and ends the run when the same turn also calls a frontend tool', async () => {
     const both =
       call + '\n```tool_call\n{"name": "showMap", "arguments": {}}\n```';
-    const engine = scriptedEngine(both);
+    const engine = new ScriptedEngine(both);
     const local: LocalTool = { ...weatherTool, execute: async () => 'Sunny' };
     const events = await collect(
       run({
@@ -382,7 +362,7 @@ describe('AgentRun', () => {
   });
 
   it('sends an unrepairable call back to the model and lets it try again', async () => {
-    const engine = scriptedEngine(
+    const engine = new ScriptedEngine(
       '```tool_call\n{"name": "sendEmail", "arguments": {}}\n```',
       'Sorry, I cannot.',
     );
@@ -398,7 +378,7 @@ describe('AgentRun', () => {
   });
 
   it('reads tool sources at the start of the run, and a client tool wins on a name clash', async () => {
-    const engine = scriptedEngine(call);
+    const engine = new ScriptedEngine(call);
     const fromSource: LocalTool = {
       ...weatherTool,
       execute: async () => 'local',
@@ -421,7 +401,7 @@ describe('AgentRun', () => {
   it('skips a failing tool source, reports it, and still answers', async () => {
     const events = await collect(
       run({
-        engine: scriptedEngine('Hi.'),
+        engine: new ScriptedEngine('Hi.'),
         input: input(),
         localTools: [
           {
@@ -444,7 +424,7 @@ describe('AgentRun', () => {
 
   it('ends with RUN_ERROR when the engine fails', async () => {
     const engine: Engine = {
-      ...scriptedEngine(),
+      ...new ScriptedEngine(),
       // eslint-disable-next-line require-yield
       async *generate() {
         throw new Error('GPU lost');
@@ -460,7 +440,7 @@ describe('AgentRun', () => {
 
 describe('ToolCalling', () => {
   it("describes the client's and the agent's tools in the system prompt", async () => {
-    const engine = scriptedEngine('Hi.');
+    const engine = new ScriptedEngine('Hi.');
     await collect(
       run({
         engine,
@@ -502,7 +482,7 @@ describe('AgentRun streaming tool calls', () => {
     ];
     let pulled = 0;
     const engine: Engine = {
-      ...scriptedEngine(),
+      ...new ScriptedEngine(),
       async *generate() {
         for (const fragment of fragments) {
           pulled++;
@@ -530,7 +510,7 @@ describe('AgentRun streaming tool calls', () => {
 
   it('needs no correction for a valid call', async () => {
     const events = await collect(
-      run({ engine: scriptedEngine(call), input: input([weatherTool]) }),
+      run({ engine: new ScriptedEngine(call), input: input([weatherTool]) }),
     );
 
     expect(types(events)).not.toContain(EventType.MESSAGES_SNAPSHOT);
@@ -544,7 +524,7 @@ describe('AgentRun streaming tool calls', () => {
   it('replaces streamed arguments that repair changed, before TOOL_CALL_END', async () => {
     const events = await collect(
       run({
-        engine: scriptedEngine(
+        engine: new ScriptedEngine(
           '```tool_call\n{"name": "plan_trip", "arguments": {"city": "Vienna", "days": "3"}}\n```',
         ),
         input: input([tripTool]),
@@ -573,7 +553,7 @@ describe('AgentRun streaming tool calls', () => {
   it('streams a call with broken JSON and ends with the repaired arguments', async () => {
     const events = await collect(
       run({
-        engine: scriptedEngine(
+        engine: new ScriptedEngine(
           "```tool_call\n{name: 'getWeather', arguments: {city: 'Vienna',}\n```",
         ),
         input: input([weatherTool]),
@@ -587,7 +567,7 @@ describe('AgentRun streaming tool calls', () => {
   });
 
   it('takes a streamed call back when it cannot be repaired, and tells the model', async () => {
-    const engine = scriptedEngine(
+    const engine = new ScriptedEngine(
       '```tool_call\n{"name": "getWeather", "arguments": {"town": "Vienna"}}\n```',
       'not json', // the answer to the re-ask
       'Sorry.',
@@ -609,7 +589,7 @@ describe('AgentRun streaming tool calls', () => {
   it('does not stream a call to an unknown tool', async () => {
     const events = await collect(
       run({
-        engine: scriptedEngine(
+        engine: new ScriptedEngine(
           '```tool_call\n{"name": "sendEmail", "arguments": {"to": "a@b.c"}}\n```',
           'Sorry.',
         ),
@@ -626,7 +606,7 @@ describe('AgentRun streaming tool calls', () => {
   it('closes and takes back a half-written call when the run is stopped', async () => {
     const abort = new AbortController();
     const engine: Engine = {
-      ...scriptedEngine(),
+      ...new ScriptedEngine(),
       async *generate() {
         yield {
           type: 'text' as const,
@@ -661,7 +641,7 @@ describe('AgentRun streaming tool calls', () => {
     };
     const events = await collect(
       run({
-        engine: scriptedEngine(
+        engine: new ScriptedEngine(
           call +
             '\n```tool_call\n{"name": "showMap", "arguments": {"zoom": 4}}\n```',
         ),
@@ -683,7 +663,7 @@ describe('AgentRun streaming tool calls', () => {
   it('keeps streaming text before and after a call, in one message', async () => {
     const events = await collect(
       run({
-        engine: scriptedEngine(`Let me check. ${call} One moment.`),
+        engine: new ScriptedEngine(`Let me check. ${call} One moment.`),
         input: input([weatherTool]),
       }),
     );
@@ -742,7 +722,7 @@ describe('AgentRun stopping', () => {
 
   it('passes the signal to tool sources and stops after model load', async () => {
     const abort = new AbortController();
-    const engine = scriptedEngine('Hi.');
+    const engine = new ScriptedEngine('Hi.');
     let seen: AbortSignal | undefined;
     const events = await collect(
       run({
@@ -769,7 +749,7 @@ describe('AgentRun stopping', () => {
     const abort = new AbortController();
     const execute = vi.fn(async () => 'Sunny');
     const engine: Engine = {
-      ...scriptedEngine(),
+      ...new ScriptedEngine(),
       async *generate() {
         yield {
           type: 'text' as const,
@@ -802,7 +782,7 @@ describe('AgentRun stopping', () => {
     const execute = vi.fn(async () => 'Sunny');
     const events = await collect(
       run({
-        engine: scriptedEngine(
+        engine: new ScriptedEngine(
           '```tool_call\n{"name": "getWeather", "arguments": {}}\n```',
         ),
         input: input(),
@@ -826,7 +806,7 @@ describe('AgentRun re-ask', () => {
     '```tool_call\n{"name": "getWeather", "arguments": {}}\n```';
 
   it('shows the model its call and the schema', async () => {
-    const engine = scriptedEngine(missingCity, '{"city": "Graz"}');
+    const engine = new ScriptedEngine(missingCity, '{"city": "Graz"}');
     await collect(run({ engine, input: input([weatherTool]) }));
 
     const [call, request] = engine.requests[1]?.messages.slice(-2) ?? [];
@@ -844,7 +824,7 @@ describe('AgentRun re-ask', () => {
   ])('accepts %s as the answer', async (_, answer) => {
     const events = await collect(
       run({
-        engine: scriptedEngine(missingCity, answer),
+        engine: new ScriptedEngine(missingCity, answer),
         input: input([weatherTool]),
       }),
     );
@@ -863,7 +843,7 @@ describe('AgentRun re-ask', () => {
       },
     ],
   ])('tells the model the error when %s throws', async (_, repairHook) => {
-    const base = scriptedEngine();
+    const base = new ScriptedEngine();
     const engine: Engine & { requests: GenerateRequest[] } = {
       ...base,
       supportsConstraint: true,
@@ -895,7 +875,7 @@ describe('AgentRun re-ask', () => {
 describe('AgentRun cut-off tool call', () => {
   it('does not run a call the output ended in, and tells the model', async () => {
     const execute = vi.fn(async () => 'Sunny');
-    const engine = scriptedEngine(
+    const engine = new ScriptedEngine(
       // Valid JSON after repair, but the block was never closed (for example a token limit).
       '```tool_call\n{"name": "getWeather", "arguments": {"city": "Vienna"',
       'Sorry.',
@@ -941,7 +921,7 @@ describe('AgentRun compaction', () => {
   it('cuts an old tool result in a run that calls tools again and again', async () => {
     // Two results of 500 tokens fit into 90 % of 1300 only when the first one is cut.
     const engine = {
-      ...scriptedEngine(call, call, 'Done.'),
+      ...new ScriptedEngine(call, call, 'Done.'),
       contextWindowSize: 1300,
     };
 
@@ -982,7 +962,7 @@ describe('AgentRun compaction', () => {
         return [...request.messages.slice(0, 1), ...request.messages.slice(-1)];
       }
     }
-    const engine = scriptedEngine(call, 'Done.');
+    const engine = new ScriptedEngine(call, 'Done.');
 
     const events = await collect(
       run({

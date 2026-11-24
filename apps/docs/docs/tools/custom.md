@@ -4,7 +4,9 @@ title: Custom Tools
 
 # Custom Tools
 
-`ToolCalling` implements the `Tools` interface of `@soverius-ai/browser-models-agui`. Implement it for another call format or check; the agent keeps the AG-UI side: streaming, snapshots, `TOOL_CALL_*` events.
+The agent takes any `Tools` (`@soverius-ai/browser-models-agui`); `ToolCalling` fits it by shape. Implement it for another call format; the agent keeps the AG-UI side: streaming, snapshots, `TOOL_CALL_*` events. `RunTools` and the other tool types are in the core and re-exported by the agent.
+
+Only another check of one tool's arguments: a `ToolCheck` in `ToolCalling`'s `checks` is enough (`{ tool, check(args) }`, returns the error for the model or `undefined`; one that throws is skipped), like [`SandboxedUiCheck`](./generative-ui.md#open-generative-ui).
 
 | `Tools.start(run)` returns | Meaning                                                            |
 | -------------------------- | ------------------------------------------------------------------ |
@@ -51,4 +53,4 @@ new BrowserModelsAgent({
 });
 ```
 
-API: [Tools](../api/browser-models-agui/index.md#tools), [RunTools](../api/browser-models-agui/index.md#runtools)
+API: [Tools](../api/browser-models-agui/index.md#tools), [RunTools](../api/browser-models/core.md#runtools), [ToolCheck](../api/browser-models-tools/tool-calling.md#toolcheck)

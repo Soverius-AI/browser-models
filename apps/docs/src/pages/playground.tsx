@@ -1,7 +1,7 @@
 import Link from '@docusaurus/Link';
 import { useLocation } from '@docusaurus/router';
 import Layout from '@theme/Layout';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import SourceCode from '../components/SourceCode';
 import { SOURCE_FILES } from '../source-files';
 
@@ -183,9 +183,16 @@ async function send(
 
 export default function Playground() {
   const requested = new URLSearchParams(useLocation().search).get('platform');
-  const [platform, setPlatform] = useState<Platform>(
-    isPlatform(requested) ? requested : 'angular',
-  );
+  // The prerendered page has no query, so the platform is known only after hydration; a render
+  // that read `?platform=` at once would not match the page (React error #418). Until then the
+  // page shows the default's tabs and texts and no example: a frame would load the wrong app.
+  const [chosen, setChosen] = useState<Platform>();
+  useEffect(() => {
+    setChosen((current) =>
+      isPlatform(requested) ? requested : (current ?? 'angular'),
+    );
+  }, [requested]);
+  const platform = chosen ?? 'angular';
   const [query, setQuery] = useState('');
   const [devtools, setDevtools] = useState(false);
   /** The running example, or its code. */
@@ -243,7 +250,7 @@ export default function Playground() {
               role="tab"
               aria-selected={id === platform}
               className={`button ${id === platform ? 'button--primary' : 'button--secondary'}`}
-              onClick={() => setPlatform(id)}
+              onClick={() => setChosen(id)}
             >
               <img src={`/img/logos/${platforms[id].logo}.svg`} alt="" />
               {platforms[id].name}
@@ -283,25 +290,29 @@ export default function Playground() {
                 ))}
               </div>
             </div>
-            {view === 'code' && (
+            {chosen && view === 'code' && (
               <div className="playground__code">
                 <SourceCode key={platform} files={SOURCE_FILES[platform]} />
               </div>
             )}
-            <iframe
-              key={platform + query + String(devtools)}
-              ref={frame}
-              title={`${current.name} example`}
-              src={src}
-              hidden={view === 'code'}
-              className="playground__frame"
-              onLoad={() => {
-                listen();
-                if (!pending.current) return;
-                void send(frame.current, pending.current);
-                pending.current = undefined;
-              }}
-            />
+            {chosen ? (
+              <iframe
+                key={platform + query + String(devtools)}
+                ref={frame}
+                title={`${current.name} example`}
+                src={src}
+                hidden={view === 'code'}
+                className="playground__frame"
+                onLoad={() => {
+                  listen();
+                  if (!pending.current) return;
+                  void send(frame.current, pending.current);
+                  pending.current = undefined;
+                }}
+              />
+            ) : (
+              <div className="playground__frame" />
+            )}
             {devtools && view === 'demo' && (
               <ol className="playground__events" aria-label="Agent events">
                 {events.length === 0 && <li>Run an example to see events.</li>}

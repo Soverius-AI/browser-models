@@ -31,6 +31,7 @@ it('finds the snippets in the docs', () => {
   expect(blocks.map(({ file }) => file)).toEqual(
     expect.arrayContaining([
       'libs/examples/snippets/src/chat.ts',
+      'libs/examples/snippets/src/engine-tools.ts',
       'libs/examples/snippets/src/agent.ts',
       'libs/examples/snippets/src/tools.ts',
       'libs/examples/snippets/src/copilotkit.tsx',

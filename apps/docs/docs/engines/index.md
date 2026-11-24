@@ -75,7 +75,7 @@ const engine =
 | `Engines.create` from `/engines`            | 4.6 KB        | all of the above                                                  | both                        |
 | `PromptApiEngine` from `/engines`           | 1.4 KB        | none, but the ONNX wasm (6.4 MB) lands in `dist`                  | both                        |
 
-Vite 8 app build, minified, all sizes gzip. One engine: import it from its own entry. `/engines`: only when the kind is picked at run time.
+Vite 8 app build, minified, all sizes gzip. One engine: import it from its own entry. `/engines`: only when the kind is picked at run time. With the `onnxruntime-web-use-extern-wasm` condition ([transformers.js](./transformers.md)) ONNX Runtime loads its wasm from a CDN, and no copy lands in `dist`.
 
 ## All engines by kind
 

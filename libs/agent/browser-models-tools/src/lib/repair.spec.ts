@@ -1,5 +1,5 @@
 import { ToolCallRepair } from './repair.ts';
-import type { ToolSpec } from '@soverius-ai/browser-models-agui';
+import type { ToolSpec } from '@soverius-ai/browser-models';
 
 const tools: ToolSpec[] = [
   {
@@ -49,6 +49,86 @@ describe('ToolCallRepair', () => {
       ok: true,
       call: { name: 'getWeather', arguments: { city: 'Graz' } },
       steps: ['reask'],
+    });
+  });
+
+  describe('checks after the schema', () => {
+    const vienna = {
+      tool: 'getWeather',
+      check: (args: Readonly<Record<string, unknown>>) =>
+        args['city'] === 'Vienna' ? undefined : 'only Vienna has weather',
+    };
+
+    it('asks the model to fix a call that fails a check', async () => {
+      const asked: string[] = [];
+      const result = await new ToolCallRepair(tools, {
+        checks: [vienna],
+        reask: async (_tool, error) => {
+          asked.push(error);
+          return '{"city":"Vienna"}';
+        },
+      }).repair('{"name":"getWeather","arguments":{"city":"Graz"}}');
+      expect(asked).toEqual(['only Vienna has weather']);
+      expect(result).toEqual({
+        ok: true,
+        call: { name: 'getWeather', arguments: { city: 'Vienna' } },
+        steps: ['reask'],
+      });
+    });
+
+    it('tells the model the error when the fix fails the check too', async () => {
+      const result = await new ToolCallRepair(tools, {
+        checks: [vienna],
+        reask: async () => '{"city":"Linz"}',
+      }).repair('{"name":"getWeather","arguments":{"city":"Graz"}}');
+      expect(result).toEqual({
+        ok: false,
+        error: 'Invalid arguments for "getWeather": only Vienna has weather.',
+      });
+    });
+
+    it('runs only the checks of the called tool, after the schema', async () => {
+      const other = { tool: 'other', check: () => 'never' };
+      const repair = new ToolCallRepair(tools, { checks: [other, vienna] });
+      expect(
+        await repair.repair(
+          '{"name":"getWeather","arguments":{"city":"Vienna"}}',
+        ),
+      ).toMatchObject({ ok: true });
+      // A schema error is reported as it is; the checks wait for valid arguments.
+      expect(
+        await repair.repair('{"name":"getWeather","arguments":{}}'),
+      ).toEqual({
+        ok: false,
+        error: expect.stringMatching(
+          /^Invalid arguments for "getWeather": .*city/,
+        ),
+      });
+    });
+  });
+
+  it('skips a check that throws: the call counts as fine', async () => {
+    const broken = {
+      tool: 'getWeather',
+      check: (): string | undefined => {
+        throw new Error('bug in the check');
+      },
+    };
+    const never = { tool: 'getWeather', check: () => 'never Vienna' };
+    const raw = '{"name":"getWeather","arguments":{"city":"Vienna"}}';
+    expect(
+      await new ToolCallRepair(tools, { checks: [broken] }).repair(raw),
+    ).toEqual({
+      ok: true,
+      call: { name: 'getWeather', arguments: { city: 'Vienna' } },
+      steps: [],
+    });
+    // The other checks of the tool still count.
+    expect(
+      await new ToolCallRepair(tools, { checks: [broken, never] }).repair(raw),
+    ).toEqual({
+      ok: false,
+      error: 'Invalid arguments for "getWeather": never Vienna.',
     });
   });
 

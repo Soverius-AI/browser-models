@@ -3,6 +3,7 @@ import { useDevtools, useModelStore } from '@soverius-ai/browser-models-react';
 import { devtoolsFromUrl, statusBadge } from '@soverius-ai/example-shared';
 import { useEffect } from 'react';
 import { agent, labels, pickModel, store } from './agent';
+import { DocsMarkdown } from './docs-links';
 import { DocsTools } from './docs-tools';
 import { modelActivityRenderer } from './model-activity';
 
@@ -12,6 +13,7 @@ const embedded = new URLSearchParams(location.search).has('embedded');
 // Created once: CopilotKit sets its renderers up again whenever these change.
 const agents = { default: agent };
 const activityRenderers = [modelActivityRenderer];
+const messageView = { assistantMessage: { markdownRenderer: DocsMarkdown } };
 
 export function App() {
   const state = useModelStore(store);
@@ -92,7 +94,7 @@ export function App() {
         </header>
         {state.availability === 'available' && (
           <div className="min-h-0 flex-1">
-            <CopilotChat />
+            <CopilotChat messageView={messageView} />
           </div>
         )}
       </main>

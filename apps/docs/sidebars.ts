@@ -1,7 +1,8 @@
 import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
 
 // Building blocks first, layer by layer, each layer only using the ones before it. How the
-// pieces work inside comes after.
+// pieces work inside comes after. Tool calling (2) runs on an engine; the AG-UI agent (3) can
+// use it.
 const sidebars: SidebarsConfig = {
   docs: [
     'intro',
@@ -21,24 +22,24 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: '2 · Agent',
-      link: { type: 'doc', id: 'agent/index' },
-      items: [
-        'agent/events',
-        'agent/without-copilotkit',
-        'agent/compaction',
-        'agent/devtools',
-      ],
-    },
-    {
-      type: 'category',
-      label: '3 · Tools',
+      label: '2 · Tools',
       link: { type: 'doc', id: 'tools/index' },
       items: [
         'tools/mcp',
         'tools/generative-ui',
         'tools/custom',
         'tools/repair',
+      ],
+    },
+    {
+      type: 'category',
+      label: '3 · Agent',
+      link: { type: 'doc', id: 'agent/index' },
+      items: [
+        'agent/events',
+        'agent/without-copilotkit',
+        'agent/compaction',
+        'agent/devtools',
       ],
     },
     {

@@ -38,6 +38,16 @@ export class OutputParser {
   #buffer = '';
   #inside: Block | undefined;
 
+  /** A tool call as the model sees it in the conversation: `body` in a ```tool_call fence. */
+  static toolCall(body: string): string {
+    return '```tool_call\n' + body + '\n```';
+  }
+
+  /** A tool result as the model sees it in the conversation. */
+  static toolResult(name: string, result: string): string {
+    return '```tool_result\n' + JSON.stringify({ name, result }) + '\n```';
+  }
+
   /** Feeds the next text fragment and returns the parts that are complete. */
   push(fragment: string): OutputPart[] {
     this.#buffer += fragment;

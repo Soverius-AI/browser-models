@@ -41,12 +41,12 @@ new BrowserModelsAgent({
 
 `SummaryCompaction` reads `engine.contextWindowSize` after `load()`. Nothing is compacted while it is unknown, or below 0 (WebLLM's `-1`: a sliding window, which WebLLM manages itself).
 
-| Engine          | `contextWindowSize`                                                               |
-| --------------- | --------------------------------------------------------------------------------- |
-| WebLLM          | the option, else what the model was built with ([WebLLM](../engines/web-llm.md))  |
-| Prompt API      | from the browser, known after the first answer: the first call is never compacted |
-| transformers.js | only the option: the library has no limit of its own                              |
-| Custom engine   | the optional member `contextWindowSize`                                           |
+| Engine          | `contextWindowSize`                                                                     |
+| --------------- | --------------------------------------------------------------------------------------- |
+| WebLLM          | the option, else what the model was built with ([WebLLM](../engines/web-llm.md))        |
+| Prompt API      | from the browser, known from the first model call on: the first call is never compacted |
+| transformers.js | only the option: the library has no limit of its own                                    |
+| Custom engine   | the optional member `contextWindowSize`                                                 |
 
 ## Your own algorithm
 

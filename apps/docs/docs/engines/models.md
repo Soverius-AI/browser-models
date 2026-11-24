@@ -33,7 +33,7 @@ await store.selectModel('nano');
 models.engine(); // the selected engine
 ```
 
-In layer 2 the agent is the model source: `new ModelStore(agent)`.
+In layer 3 the agent is the model source: `new ModelStore(agent)`.
 
 ## State
 
@@ -50,16 +50,16 @@ In layer 2 the agent is the model source: `new ModelStore(agent)`.
 
 ## ModelStore
 
-| Member                | Does                                                                  |
-| --------------------- | --------------------------------------------------------------------- |
-| `getState()`          | the current state                                                     |
-| `subscribe(listener)` | call `listener` on every change; returns a stop function              |
-| `agent`, `modelIds`   | the model source and its ids                                          |
-| `selectModel(id)`     | switch model, unload the previous one, check again                    |
-| `refresh()`           | check the selected model                                              |
-| `download()`          | `engine.load()` with progress, then `refresh()` and `refreshModels()` |
-| `refreshModels()`     | check all models and storage (loads the engine libraries)             |
-| `deleteModel(id)`     | `engine.delete()`                                                     |
+| Member                | Does                                                                                                              |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `getState()`          | the current state                                                                                                 |
+| `subscribe(listener)` | call `listener` on every change; returns a stop function                                                          |
+| `agent`, `modelIds`   | the model source and its ids                                                                                      |
+| `selectModel(id)`     | switch model, unload the previous one, check again                                                                |
+| `refresh()`           | check the selected model                                                                                          |
+| `download()`          | `engine.load()` with progress, then `refresh()`; `refreshModels()` if the list was loaded; a failure sets `error` |
+| `refreshModels()`     | check all models and storage (loads the engine libraries)                                                         |
+| `deleteModel(id)`     | `engine.delete()`                                                                                                 |
 
 A failing check counts as `unavailable` and sets `error`. The selected model is checked when the store is created.
 

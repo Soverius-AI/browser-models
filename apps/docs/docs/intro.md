@@ -11,27 +11,28 @@ Language models that run in the browser, in three layers. Start with the first, 
 flowchart TB
   app["your app"]
   fw["framework bindings<br/>-angular · -react · -vue"]
-  tools["3 · tool calling<br/>@soverius-ai/browser-models-tools"]
-  agui["2 · AG-UI agent<br/>@soverius-ai/browser-models-agui"]
+  agui["3 · AG-UI agent<br/>@soverius-ai/browser-models-agui"]
+  tools["2 · tool calling<br/>@soverius-ai/browser-models-tools"]
   core["1 · engines<br/>@soverius-ai/browser-models"]
   libs["Prompt API · WebLLM · transformers.js"]
   app --> fw
-  app --> tools
-  app -.->|chat without AG-UI| core
+  app -.->|ToolCallingAgent, no AG-UI| tools
+  app -.->|chat, no AG-UI| core
   fw --> agui
-  tools --> agui
+  agui -.->|tools option| tools
   agui --> core
   fw --> core
   tools --> core
   core --> libs
 ```
 
-| You build                                       | Install                                          | Start with                            |
-| ----------------------------------------------- | ------------------------------------------------ | ------------------------------------- |
-| a chat on a model in the browser, no AG-UI      | `browser-models`                                 | [Engines](./engines/index.md)         |
-| a CopilotKit or AG-UI chat                      | `browser-models` + `browser-models-agui`         | [Agent](./agent/index.md)             |
-| the same with tools, MCP, WebMCP, generative UI | add `browser-models-tools`                       | [Tools](./tools/index.md)             |
-| Angular, React or Vue                           | add `browser-models-angular`, `-react` or `-vue` | [Frameworks](./frameworks/angular.md) |
+| You build                                  | Install                                          | Start with                            |
+| ------------------------------------------ | ------------------------------------------------ | ------------------------------------- |
+| a chat on a model in the browser, no AG-UI | `browser-models`                                 | [Engines](./engines/index.md)         |
+| tool calls on an engine, no AG-UI          | add `browser-models-tools`                       | [Tools](./tools/index.md)             |
+| a CopilotKit or AG-UI chat                 | `browser-models` + `browser-models-agui`         | [Agent](./agent/index.md)             |
+| the same with tools, MCP, WebMCP, gen. UI  | add `browser-models-tools`                       | [Tools](./tools/index.md)             |
+| Angular, React or Vue                      | add `browser-models-angular`, `-react` or `-vue` | [Frameworks](./frameworks/angular.md) |
 
 ## Engines
 
@@ -45,9 +46,9 @@ flowchart TB
 
 ```bash
 pnpm add @soverius-ai/browser-models
+pnpm add @soverius-ai/browser-models-tools               # tool calling
 pnpm add @soverius-ai/browser-models-agui                # AG-UI agent
 pnpm add @ag-ui/client zod                               # only without CopilotKit
-pnpm add @soverius-ai/browser-models-tools               # tool calling
 pnpm add @mlc-ai/web-llm                                 # only for WebLlmEngine
 pnpm add @huggingface/transformers                       # only for TransformersJsEngine
 ```
@@ -73,13 +74,42 @@ if ((await engine.availability()) === 'unavailable') {
 }
 ```
 
-## 2 · An AG-UI agent
+## 2 · Tools on an engine
+
+```ts title="libs/examples/snippets/src/engine-tools.ts"
+import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
+import {
+  ToolCallingAgent,
+  type LocalTool,
+} from '@soverius-ai/browser-models-tools';
+
+// Layer 2: tool calling on the engine, no AG-UI. ToolCallingAgent runs the tool and keeps the chat.
+const currentTime: LocalTool = {
+  name: 'currentTime',
+  description: 'Returns the current local time.',
+  parameters: { type: 'object', properties: {} },
+  execute: async () => new Date().toLocaleTimeString(),
+};
+
+const agent = new ToolCallingAgent({
+  engine: new PromptApiEngine(),
+  localTools: [currentTime],
+});
+const output = document.body.appendChild(document.createElement('p'));
+
+for await (const part of agent.run('What time is it?')) {
+  if (part.type === 'tool-call') output.append(`[${part.call.name}] `);
+  if (part.type === 'text') output.append(part.text);
+}
+```
+
+## 3 · An AG-UI agent
 
 ```ts title="libs/examples/snippets/src/agent.ts"
 import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 
-// Layer 2: an AG-UI agent on the engine. Any AG-UI client runs it; here its own runAgent.
+// Layer 3: an AG-UI agent on the engine. Any AG-UI client runs it; here its own runAgent.
 const agent = new BrowserModelsAgent({
   models: { nano: new PromptApiEngine() },
   defaultModel: 'nano',
@@ -97,14 +127,14 @@ await agent.runAgent(
 );
 ```
 
-## 3 · Tools
+### With tools
 
 ```ts title="libs/examples/snippets/src/tools.ts"
 import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 import { ToolCalling, type LocalTool } from '@soverius-ai/browser-models-tools';
 
-// Layer 3: tool calling. The agent runs the tool and gives the result back to the model.
+// Layer 3 with layer 2: the AG-UI agent with tool calling. It runs the tool, the model answers.
 const currentTime: LocalTool = {
   name: 'currentTime',
   description: 'Returns the current local time.',

@@ -2,7 +2,7 @@ import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 import { ToolCalling, type LocalTool } from '@soverius-ai/browser-models-tools';
 
-// Layer 3: tool calling. The agent runs the tool and gives the result back to the model.
+// Layer 3 with layer 2: the AG-UI agent with tool calling. It runs the tool, the model answers.
 const currentTime: LocalTool = {
   name: 'currentTime',
   description: 'Returns the current local time.',

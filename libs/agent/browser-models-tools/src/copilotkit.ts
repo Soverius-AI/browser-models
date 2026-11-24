@@ -14,6 +14,8 @@ import { concatMap, from } from 'rxjs';
 import { asArray, asObject, asString } from './lib/json.ts';
 import { closeJson } from './lib/partial-json.ts';
 
+export { SandboxedUiCheck } from './lib/sandboxed-ui-check.ts';
+
 /** The tool CopilotKit registers when `openGenerativeUI` is set, and the activity it renders. */
 const TOOL_NAME = 'generateSandboxedUi';
 const ACTIVITY_TYPE = 'open-generative-ui';

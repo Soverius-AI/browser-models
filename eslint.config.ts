@@ -34,15 +34,15 @@ export default [
               onlyDependOnLibsWithTags: ['scope:agent'],
             },
             { sourceTag: 'scope:examples', onlyDependOnLibsWithTags: ['*'] },
-            // Layers: engines (core) ← AG-UI agent ← tool calling; frameworks build on the agent.
+            // Layers: engines (core) ← tool calling ← AG-UI agent; frameworks build on the agent.
             { sourceTag: 'type:core', onlyDependOnLibsWithTags: [] },
             {
-              sourceTag: 'type:agent',
+              sourceTag: 'type:tools',
               onlyDependOnLibsWithTags: ['type:core'],
             },
             {
-              sourceTag: 'type:tools',
-              onlyDependOnLibsWithTags: ['type:core', 'type:agent'],
+              sourceTag: 'type:agent',
+              onlyDependOnLibsWithTags: ['type:core', 'type:tools'],
             },
             {
               sourceTag: 'type:framework',
@@ -61,6 +61,11 @@ export default [
         },
       ],
     },
+  },
+  {
+    // The specs of tool calling also run it inside the AG-UI agent, one layer up.
+    files: ['libs/agent/browser-models-tools/src/**/*.spec.ts'],
+    rules: { '@nx/enforce-module-boundaries': 'off' },
   },
   {
     files: [

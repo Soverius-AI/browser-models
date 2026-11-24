@@ -2,6 +2,7 @@ import Link from '@docusaurus/Link';
 import Layout from '@theme/Layout';
 import TabItem from '@theme/TabItem';
 import Tabs from '@theme/Tabs';
+import { Fragment } from 'react';
 import { SourceFile } from '../components/SourceCode';
 import ModelOverview from '../components/ModelOverview';
 import BrowserModelsWordmark from '../components/BrowserModelsWordmark';
@@ -37,7 +38,7 @@ const features = [
   {
     title: 'Three layers',
     icon: <path d="m12 3 10 5-10 5L2 8l10-5Zm-10 9 10 5 10-5M2 16l10 5 10-5" />,
-    text: 'Engines alone for a plain chat, an AG-UI agent for CopilotKit, tool calling when you need it. Take only what you use.',
+    text: 'Engines alone for a plain chat, tool calling when you need it, an AG-UI agent for CopilotKit. Take only what you use.',
   },
   {
     title: 'Built on existing standards',
@@ -66,7 +67,18 @@ const features = [
  * One tab per layer, simplest first. The code is read from libs/examples/snippets, where each
  * file runs in a test against a scripted model: what is shown here runs.
  */
-const snippets = [
+/** One tab of the front page's code. */
+interface Snippet {
+  readonly id: string;
+  readonly label: string;
+  readonly text: string;
+  readonly install: string;
+  readonly file: string;
+  /** The playground example that runs it; none when no example does. */
+  readonly playground?: string;
+}
+
+const snippets: readonly Snippet[] = [
   {
     id: 'chat',
     label: 'Chat',
@@ -76,20 +88,19 @@ const snippets = [
     playground: 'engine',
   },
   {
-    id: 'agent',
-    label: 'Agent',
-    text: 'Layer 2: an AG-UI agent on the engine. Any AG-UI client can run it.',
-    install:
-      'pnpm add @soverius-ai/browser-models @soverius-ai/browser-models-agui',
-    file: 'libs/examples/snippets/src/agent.ts',
-    playground: 'agent',
-  },
-  {
     id: 'tools',
     label: 'Tools',
-    text: 'Layer 3: tool calling. The agent runs the tool and the model answers from its result.',
+    text: 'Layer 2: tool calling on the engine, no AG-UI. ToolCallingAgent runs the tool and the model answers from its result.',
     install:
-      'pnpm add @soverius-ai/browser-models @soverius-ai/browser-models-agui @soverius-ai/browser-models-tools',
+      'pnpm add @soverius-ai/browser-models @soverius-ai/browser-models-tools',
+    file: 'libs/examples/snippets/src/engine-tools.ts',
+  },
+  {
+    id: 'agent',
+    label: 'Agent',
+    text: 'Layer 3: an AG-UI agent on the engine, with the same tool. Any AG-UI client can run it.',
+    install:
+      'pnpm add @soverius-ai/browser-models @soverius-ai/browser-models-tools @soverius-ai/browser-models-agui',
     file: 'libs/examples/snippets/src/tools.ts',
     playground: 'vanilla',
   },
@@ -102,7 +113,29 @@ const snippets = [
     file: 'libs/examples/snippets/src/copilotkit.tsx',
     playground: 'react',
   },
-] as const;
+];
+
+/** `pnpm add …`, each package linked to its npm page. */
+function InstallLine({ command }: { command: string }) {
+  const [tool, verb, ...packages] = command.split(' ');
+  return (
+    <pre className="code-section__install">
+      {tool} {verb}
+      {packages.map((name) => (
+        <Fragment key={name}>
+          {' '}
+          <a
+            href={`https://www.npmjs.com/package/${name}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {name}
+          </a>
+        </Fragment>
+      ))}
+    </pre>
+  );
+}
 
 export default function Home() {
   return (
@@ -183,15 +216,17 @@ export default function Home() {
               >
                 <div className="code-section__tab">
                   <p>{snippet.text}</p>
-                  <pre className="code-section__install">{snippet.install}</pre>
+                  <InstallLine command={snippet.install} />
                   <SourceFile path={snippet.file} />
                   <p className="code-section__run">
-                    <Link
-                      className="button button--primary"
-                      to={`/playground?platform=${snippet.playground}`}
-                    >
-                      Run it in the playground
-                    </Link>
+                    {snippet.playground && (
+                      <Link
+                        className="button button--primary"
+                        to={`/playground?platform=${snippet.playground}`}
+                      >
+                        Run it in the playground
+                      </Link>
+                    )}
                     <span>
                       Runs in Chrome with Gemini Nano. Tested in CI against a
                       scripted model.

@@ -25,14 +25,14 @@ sequenceDiagram
 
 ## Layer by layer
 
-| Layer         | What it does here                                                               | Code             |
-| ------------- | ------------------------------------------------------------------------------- | ---------------- |
-| docs          | the Markdown of this site, bundled with `import.meta.glob`, split into sections | `docs-index.ts`  |
-| 1 · engines   | Gemini Nano if the browser has it, else Gemma 4 on WebLLM (16k context)         | `agent.ts`       |
-| 2 · agent     | `BrowserModelsAgent`; CopilotKit talks to it                                    | `agent.ts`       |
-| 3 · tools     | `searchDocs`, `readDocs`: tools of the agent, results go back to the model      | `agent.ts`       |
-| generative UI | `searchDocs` rendered as source chips, `showDocsPage` as a page card            | `docs-tools.tsx` |
-| instructions  | CopilotKit `useAgentContext`: search first, answer only from the results        | `docs-tools.tsx` |
+| Layer         | What it does here                                                                                                    | Code                                                  |
+| ------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| docs          | the Markdown of this site, bundled with `import.meta.glob`, split into sections                                      | `agent.ts` (glob), `docs-index.ts` (sections, search) |
+| 1 · engines   | Gemini Nano if the browser has it, else Gemma 4 on WebLLM (16k context); `?model=<id>` overrides; `demo` is scripted | `agent.ts`                                            |
+| 2 · tools     | `searchDocs`, `readDocs`: tools of the agent, results go back to the model                                           | `agent.ts`                                            |
+| 3 · agent     | `BrowserModelsAgent`; CopilotKit talks to it                                                                         | `agent.ts`                                            |
+| generative UI | `searchDocs` rendered as source chips, `showDocsPage` as a page card                                                 | `docs-tools.tsx`                                      |
+| instructions  | CopilotKit `useAgentContext`: search first, answer only from the results                                             | `docs-tools.tsx`                                      |
 
 ## The tools of the agent
 
@@ -41,7 +41,11 @@ sequenceDiagram
 import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 import { WebLlmEngine } from '@soverius-ai/browser-models/web-llm';
 import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
-import { ToolCalling, type LocalTool } from '@soverius-ai/browser-models-tools';
+import {
+  ToolCalling,
+  type LocalTool,
+  type ToolCheck,
+} from '@soverius-ai/browser-models-tools';
 import { demoEngine } from '@soverius-ai/example-shared';
 
 // `docs`: the DocsIndex of docs-index.ts, built from the bundled Markdown.
@@ -88,17 +92,35 @@ const readDocs: LocalTool<{ id: string }> = {
   },
 };
 
+// A placeholder query ("keyword", "…") goes back to the model, which then uses the question's words.
+const realQuery: ToolCheck = {
+  tool: 'searchDocs',
+  check: ({ query }) =>
+    /^\s*(…|\.\.\.|(your )?(keywords?|search (terms?|keywords?))( here)?)\s*$/i.test(
+      String(query),
+    )
+      ? 'the query is a placeholder; search with words from the question'
+      : undefined,
+};
+
 export const agent = new BrowserModelsAgent({
   agentId: 'default',
   models: engines,
   defaultModel: 'gemma',
-  tools: new ToolCalling({ localTools: [searchDocs, readDocs], maxSteps: 6 }),
+  tools: new ToolCalling({
+    localTools: [searchDocs, readDocs],
+    checks: [realQuery],
+    maxSteps: 6,
+  }),
 });
 
 export const instructions = [
+  'You answer questions about browser-models, a library that runs language models in the browser.',
   'Always call searchDocs first, with the key words of the question.',
-  'Answer only from what the tools returned.',
+  'If an excerpt is not enough, call readDocs with the id of the best section.',
+  'Answer only from what the tools returned, briefly, with a short code example when it helps.',
   'When one section answers the question, call showDocsPage with its url and title.',
+  'If the docs do not answer the question, say so.',
 ].join('\n');
 ```
 
@@ -163,7 +185,7 @@ function SearchResults({ hits }: { hits: Hit[] }) {
 }
 ```
 
-The app's `docs-tools.tsx` adds source chips and the page card; "Open" goes through `postMessage` to the site.
+The app's `docs-tools.tsx` adds source chips and the page card; "Open": embedded, a `postMessage` to the site, which navigates; on its own, a new tab on the docs site (`VITE_DOCS_URL`, default browser-models.soverius.ai).
 
 ## In this site
 

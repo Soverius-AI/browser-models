@@ -1,5 +1,5 @@
 import type { Context, Message } from '@ag-ui/core';
-import type { ChatMessage } from '@soverius-ai/browser-models';
+import { OutputParser, type ChatMessage } from '@soverius-ai/browser-models';
 
 /** A message of the prompt, and the AG-UI message it was made from. */
 export interface PromptMessage extends ChatMessage {
@@ -80,16 +80,14 @@ const EMPTY_RESULT = 'Done. The tool ran and returned no data.';
 
 /** How a tool call looks in the conversation the model sees. */
 export function toolCallBlock(name: string, argumentsJson: string): string {
-  return (
-    '```tool_call\n' +
-    `{"name": ${JSON.stringify(name)}, "arguments": ${argumentsJson || '{}'}}` +
-    '\n```'
+  return OutputParser.toolCall(
+    `{"name": ${JSON.stringify(name)}, "arguments": ${argumentsJson || '{}'}}`,
   );
 }
 
 /** How a tool result looks in the conversation the model sees. */
 export function toolResultBlock(name: string, result: string): string {
-  return '```tool_result\n' + JSON.stringify({ name, result }) + '\n```';
+  return OutputParser.toolResult(name, result);
 }
 
 const TOOL_RESULT = /```tool_result\n(.*)\n```/g;

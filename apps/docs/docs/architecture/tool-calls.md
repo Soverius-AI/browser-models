@@ -7,7 +7,7 @@ title: Tool calls
 ```mermaid
 flowchart TB
   written["the model writes a tool call"] --> stream["streamed: TOOL_CALL_START, TOOL_CALL_ARGS"]
-  stream --> check["complete: ToolCalling.check → repair json · name · coerce · reask · hook"]
+  stream --> check["complete: ToolCalling.check → repair json · name · coerce · checks · reask · hook"]
   check -->|"invalid or cut off"| feedback["call taken back, error to the model, next step"]
   check -->|valid| kind{"whose tool?"}
   kind -->|client| client["run ends; the client runs it and starts a follow-up run"]
@@ -32,6 +32,7 @@ repaired   START  ARGS {"days":"3"   CUSTOM  MESSAGES_SNAPSHOT {"days":3}  END
 - At `TOOL_CALL_END` the client holds the repaired call: joined deltas, or the snapshot.
 - `MESSAGES_SNAPSHOT` = the run's input messages + this run's messages. AG-UI has no event to take back sent arguments.
 - Unknown tool name: nothing is streamed. Names are matched exactly, then without a prefix (`functions.`, `default_api.`), `()`, case and separators, then with one typo. A name that still matches no tool goes back to the model as an error listing the tool names, while steps are left.
-- The instructions show a real call of the first tool, with example arguments from its schema: small models copy a placeholder such as `<tool name>` as it is.
+- The instructions show a real call of the simplest tool with a required parameter, with example values for its required arguments: small models copy a placeholder such as `<tool name>` as it is, and copy a large tool's example as their page.
+- Without AG-UI, `ToolCallingAgent` runs the same steps on an engine and yields parts (`text`, `tool-call`, `tool-error` …) instead of events; a call is not streamed, and a call to a tool of the caller ends the run: [ToolCallingAgent](../tools/index.md#toolcallingagent).
 
 Details: [Repair & streaming](../tools/repair.md).

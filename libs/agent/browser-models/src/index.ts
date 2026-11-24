@@ -21,6 +21,13 @@ export {
 export { AsyncQueue } from './lib/async-queue.ts';
 export { untilAborted } from './lib/abort.ts';
 export { OutputParser, type OutputPart } from './lib/output-parser.ts';
+export type {
+  CheckedCall,
+  RepairStep,
+  RunTools,
+  ToolCall,
+  ToolSpec,
+} from './lib/tools.ts';
 export {
   ModelStore,
   type ModelSource,

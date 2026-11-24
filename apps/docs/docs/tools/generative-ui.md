@@ -53,17 +53,34 @@ CopilotKit's Open Generative UI: the model calls `generateSandboxedUi`, and Copi
 ```ts
 import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 import { ToolCalling } from '@soverius-ai/browser-models-tools';
-import { OpenGenerativeUi } from '@soverius-ai/browser-models-tools/copilotkit';
+import {
+  OpenGenerativeUi,
+  SandboxedUiCheck,
+} from '@soverius-ai/browser-models-tools/copilotkit';
 
 const agent = new BrowserModelsAgent({
   models,
   defaultModel: 'gemma',
-  tools: new ToolCalling(), // the page is written through a tool call
+  // The page is written through a tool call. The check sends a page back to the model when
+  // its script does not parse or looks for elements the page lacks.
+  tools: new ToolCalling({ checks: [new SandboxedUiCheck()] }),
 });
 agent.use(new OpenGenerativeUi());
 ```
 
 `OpenGenerativeUi` is an AG-UI middleware. While the tool call streams, it reports what has arrived as `open-generative-ui` activity messages, which CopilotKit renders. CopilotKit's server runtime normally does this; an agent in the browser has no runtime.
+
+`SandboxedUiCheck`: small models often write a script for another page than the one they wrote. It fails in the sandbox, where the model never hears of it. The check finds that before the page shows; the model fixes the call ([re-ask](./repair.md#repair)) or gets the error.
+
+| `SandboxedUiCheck` | Rule                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| scripts            | must parse                                                                                                                                                   |
+| rejected           | an id the page lacks, looked up and used at once (`getElementById('x').value`, `querySelector('#x').textContent`) or kept in a variable that is never tested |
+| allowed            | a lookup that is tested: `if (el)`, `el?.`, `el &&`, `?.` or a fallback after the lookup; `querySelectorAll`; lookups in comments                            |
+| ids that count     | `id="x"` in any case or unquoted, `el.id = 'x'`, `setAttribute('id', 'x')`, `{ id: 'x' }`                                                                    |
+| not checked        | pages whose script builds an id at run time: `el.id = name`, `id="row-${i}"`                                                                                 |
+
+Patterns, not a parser: in doubt the call passes.
 
 ### 2. CopilotKit
 

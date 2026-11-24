@@ -1,4 +1,4 @@
-import type { ToolSpec } from '@soverius-ai/browser-models-agui';
+import type { ToolSpec } from '@soverius-ai/browser-models';
 
 /**
  * A tool that runs inside the agent, in the browser. Its result goes back to the model.
@@ -8,6 +8,18 @@ export interface LocalTool<Args = Record<string, unknown>> extends ToolSpec {
   // Method syntax on purpose: it lets a LocalTool<{ city: string }> sit in a LocalTool[] list.
   /** Runs the tool. The result goes back to the model, as text or as JSON. */
   execute(args: Args, signal: AbortSignal): Promise<unknown>;
+}
+
+/**
+ * A check of one tool's arguments beyond its schema, for example that a generated page's script
+ * finds its elements. A failed check counts like a schema error: the model is asked once to fix
+ * the call, then told the error. A check that throws is skipped: the call counts as fine.
+ */
+export interface ToolCheck {
+  /** The name of the tool it checks. */
+  readonly tool: string;
+  /** What is wrong with the arguments, said to the model; undefined when they are fine. */
+  check(args: Readonly<Record<string, unknown>>): string | undefined;
 }
 
 /** Supplies local tools at the start of every run, for example the page's WebMCP tools. */

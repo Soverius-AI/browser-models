@@ -5,28 +5,28 @@ interface, and as [AG-UI](https://docs.ag-ui.com) agents. CopilotKit or any AG-U
 
 [Docs](https://browser-models.soverius.ai/docs) · [Playground](https://browser-models.soverius.ai/playground) · by [Soverius AI](https://soverius.ai) · [Newsletter](https://soverius.ai/newsletter) · MIT
 
-> Early stage (0.x). Three layers, each its own package: engines, an AG-UI agent, tool calling. Take only
+> Early stage (0.x). Three layers, each its own package: engines, tool calling, an AG-UI agent. Take only
 > the layers you need.
 
-|                    |                                                                                              |
-| ------------------ | -------------------------------------------------------------------------------------------- |
-| Engines            | Gemini Nano / Phi-4-mini (Prompt API), WebLLM (WebGPU), transformers.js (WebGPU, WASM)       |
-| Protocol           | AG-UI events: text, reasoning, tool calls, activity (model loading), no server               |
-| Tool calls         | arguments stream while the model writes; broken calls are repaired before they run           |
-| Generative UI      | components you write, or pages the model writes (CopilotKit's Open Generative UI, sandboxed) |
-| Tools              | local tools, frontend tools (e.g. CopilotKit), the page's WebMCP tools, MCP servers          |
-| Long conversations | compacted to fit the model's context: older turns become a summary, old tool results are cut |
-| Models on a device | explicit model selection, download with progress, list and delete downloaded models          |
-| Size               | minified ES modules; in an app 2.1 KB gzip (one engine) up to 20 KB (agent and tool calling) |
-| WebLLM             | runs in the package's own Web Worker, no worker file to write                                |
+|                    |                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| Engines            | Gemini Nano / Phi-4-mini (Prompt API), WebLLM (WebGPU), transformers.js (WebGPU, WASM)          |
+| Protocol           | AG-UI events: text, reasoning, tool calls, activity (model loading), no server                  |
+| Tool calls         | on the agent or on an engine alone; arguments stream; broken calls are repaired before they run |
+| Generative UI      | components you write, or pages the model writes (CopilotKit's Open Generative UI, sandboxed)    |
+| Tools              | local tools, frontend tools (e.g. CopilotKit), the page's WebMCP tools, MCP servers             |
+| Long conversations | compacted to fit the model's context: older turns become a summary, old tool results are cut    |
+| Models on a device | explicit model selection, download with progress, list and delete downloaded models             |
+| Size               | minified ES modules; in an app 2.1 KB gzip (one engine) up to 21 KB (agent and tool calling)    |
+| WebLLM             | runs in the package's own Web Worker, no worker file to write                                   |
 
 ## Install
 
 ```bash
 pnpm add @soverius-ai/browser-models                            # 1 · engines
-pnpm add @soverius-ai/browser-models-agui                       # 2 · AG-UI agent
+pnpm add @soverius-ai/browser-models-tools                      # 2 · tool calling
+pnpm add @soverius-ai/browser-models-agui                       # 3 · AG-UI agent
 pnpm add @ag-ui/client zod                                      # only without CopilotKit
-pnpm add @soverius-ai/browser-models-tools                      # 3 · tool calling
 pnpm add @mlc-ai/web-llm                                        # only for WebLlmEngine
 pnpm add @huggingface/transformers                              # only for TransformersJsEngine
 pnpm add @soverius-ai/browser-models-angular                    # or -react, -vue
@@ -55,13 +55,42 @@ if ((await engine.availability()) === 'unavailable') {
 }
 ```
 
-### 2 · An AG-UI agent
+### 2 · Tools on an engine
+
+```ts title="libs/examples/snippets/src/engine-tools.ts"
+import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
+import {
+  ToolCallingAgent,
+  type LocalTool,
+} from '@soverius-ai/browser-models-tools';
+
+// Layer 2: tool calling on the engine, no AG-UI. ToolCallingAgent runs the tool and keeps the chat.
+const currentTime: LocalTool = {
+  name: 'currentTime',
+  description: 'Returns the current local time.',
+  parameters: { type: 'object', properties: {} },
+  execute: async () => new Date().toLocaleTimeString(),
+};
+
+const agent = new ToolCallingAgent({
+  engine: new PromptApiEngine(),
+  localTools: [currentTime],
+});
+const output = document.body.appendChild(document.createElement('p'));
+
+for await (const part of agent.run('What time is it?')) {
+  if (part.type === 'tool-call') output.append(`[${part.call.name}] `);
+  if (part.type === 'text') output.append(part.text);
+}
+```
+
+### 3 · An AG-UI agent
 
 ```ts title="libs/examples/snippets/src/agent.ts"
 import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 
-// Layer 2: an AG-UI agent on the engine. Any AG-UI client runs it; here its own runAgent.
+// Layer 3: an AG-UI agent on the engine. Any AG-UI client runs it; here its own runAgent.
 const agent = new BrowserModelsAgent({
   models: { nano: new PromptApiEngine() },
   defaultModel: 'nano',
@@ -79,14 +108,14 @@ await agent.runAgent(
 );
 ```
 
-### 3 · Tools
+### With tools
 
 ```ts title="libs/examples/snippets/src/tools.ts"
 import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 import { ToolCalling, type LocalTool } from '@soverius-ai/browser-models-tools';
 
-// Layer 3: tool calling. The agent runs the tool and gives the result back to the model.
+// Layer 3 with layer 2: the AG-UI agent with tool calling. It runs the tool, the model answers.
 const currentTime: LocalTool = {
   name: 'currentTime',
   description: 'Returns the current local time.',
@@ -197,28 +226,29 @@ More: [agent](https://browser-models.soverius.ai/docs/agent) ·
 
 ## Packages
 
-| Package                               | Entry             | Exports                                                                                  | You also install                                   |
-| ------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `@soverius-ai/browser-models`         | `.`               | `Engine`, `EngineKind`, `ModelSettings`, `Models`, `ModelStore`, `OutputParser`          | –                                                  |
-|                                       | `/prompt-api`     | `PromptApiEngine`                                                                        | –                                                  |
-|                                       | `/web-llm`        | `WebLlmEngine`                                                                           | `@mlc-ai/web-llm`                                  |
-|                                       | `/web-llm/worker` | `startWebLlmWorker`                                                                      | `@mlc-ai/web-llm`                                  |
-|                                       | `/transformers`   | `TransformersJsEngine`                                                                   | `@huggingface/transformers`                        |
-|                                       | `/engines`        | `Engines.create(kind, …)` and all three engines                                          | both engine libraries                              |
-| `@soverius-ai/browser-models-agui`    | `.`               | `BrowserModelsAgent`, `AgentRun`, `SummaryCompaction`, `AgentEvents`, `MODEL_ACTIVITY` … | peers `@ag-ui/client`, `@ag-ui/core` 1.x, `rxjs` 7 |
-| `@soverius-ai/browser-models-tools`   | `.`               | `ToolCalling`, `LocalTool`, `LocalToolSource`, `ToolCallRepair`                          | peers `@ag-ui/client` 1.x, `rxjs` 7                |
-|                                       | `/mcp`            | `McpTools`                                                                               | –                                                  |
-|                                       | `/webmcp`         | `WebMcpTools`                                                                            | –                                                  |
-|                                       | `/copilotkit`     | `OpenGenerativeUi`                                                                       | –                                                  |
-| `@soverius-ai/browser-models-angular` | `.`               | `provideBrowserModels`, `withAgent`, `withDevtools`, `injectBrowserModels`               | `@angular/core`                                    |
-| `@soverius-ai/browser-models-react`   | `.`               | `useModelStore`, `useDevtools`                                                           | `react`                                            |
-| `@soverius-ai/browser-models-vue`     | `.`               | `useModelStore`, `useDevtools`                                                           | `vue`                                              |
+| Package                               | Entry             | Exports                                                                                                                | You also install                                   |
+| ------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `@soverius-ai/browser-models`         | `.`               | `Engine`, `EngineKind`, `ModelSettings`, `Models`, `ModelStore`, `OutputParser`, tool types (`ToolSpec`, `RunTools` …) | –                                                  |
+|                                       | `/prompt-api`     | `PromptApiEngine`                                                                                                      | –                                                  |
+|                                       | `/web-llm`        | `WebLlmEngine`                                                                                                         | `@mlc-ai/web-llm`                                  |
+|                                       | `/web-llm/worker` | `startWebLlmWorker`                                                                                                    | `@mlc-ai/web-llm`                                  |
+|                                       | `/transformers`   | `TransformersJsEngine`                                                                                                 | `@huggingface/transformers`                        |
+|                                       | `/engines`        | `Engines.create(kind, …)` and all three engines                                                                        | both engine libraries                              |
+| `@soverius-ai/browser-models-tools`   | `.`               | `ToolCalling`, `ToolCallingAgent`, `LocalTool`, `LocalToolSource`, `ToolCheck`, `ToolCallRepair`                       | –                                                  |
+|                                       | `/mcp`            | `McpTools`                                                                                                             | –                                                  |
+|                                       | `/webmcp`         | `WebMcpTools`                                                                                                          | –                                                  |
+|                                       | `/copilotkit`     | `OpenGenerativeUi`, `SandboxedUiCheck`                                                                                 | optional peers `@ag-ui/client` 1.x, `rxjs` 7       |
+| `@soverius-ai/browser-models-agui`    | `.`               | `BrowserModelsAgent`, `AgentRun`, `SummaryCompaction`, `AgentEvents`, `MODEL_ACTIVITY` …                               | peers `@ag-ui/client`, `@ag-ui/core` 1.x, `rxjs` 7 |
+| `@soverius-ai/browser-models-angular` | `.`               | `provideBrowserModels`, `withAgent`, `withDevtools`, `injectBrowserModels`                                             | `@angular/core`                                    |
+| `@soverius-ai/browser-models-react`   | `.`               | `useModelStore`, `useDevtools`                                                                                         | `react`                                            |
+| `@soverius-ai/browser-models-vue`     | `.`               | `useModelStore`, `useDevtools`                                                                                         | `vue`                                              |
 
-The engine core has no runtime dependencies; WebLLM runs in the package's own Web Worker. `@ag-ui/client`, `@ag-ui/core` (1.x) and `rxjs` are peers: the app's copy, usually CopilotKit's; with npm, install `@ag-ui/client` at the version CopilotKit pins. `jsonrepair` and `@cfworker/json-schema` come with `-tools`. Our packages need no zod, but `@ag-ui/core` does: without CopilotKit, install `@ag-ui/client` and `zod`. Do not install `rxjs` yourself; the copy `@ag-ui/client` brings fills the peer.
+The engine core has no runtime dependencies; WebLLM runs in the package's own Web Worker. `@ag-ui/client`, `@ag-ui/core` (1.x) and `rxjs` are peers: the app's copy, usually CopilotKit's; with npm, install `@ag-ui/client` at the version CopilotKit pins. `jsonrepair` and `@cfworker/json-schema` come with `-tools`, which needs neither the agent nor AG-UI: only its `/copilotkit` entry uses `@ag-ui/client` and `rxjs`. Our packages need no zod, but `@ag-ui/core` does: without CopilotKit, install `@ag-ui/client` and `zod`. Do not install `rxjs` yourself; the copy `@ag-ui/client` brings fills the peer.
 
 | You build                            | Install                                        |
 | ------------------------------------ | ---------------------------------------------- |
 | a plain chat, no AG-UI               | `browser-models`                               |
+| tool calls on an engine, no AG-UI    | `browser-models` + `browser-models-tools`      |
 | an AG-UI or CopilotKit chat          | `browser-models` + `browser-models-agui`       |
 | the same with tools, MCP, WebMCP, UI | add `browser-models-tools`                     |
 | Angular, React or Vue bindings       | add `browser-models-angular`, `-react`, `-vue` |

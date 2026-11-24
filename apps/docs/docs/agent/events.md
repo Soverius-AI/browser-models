@@ -30,7 +30,7 @@ Tool call events need `tools`: [Tool calls](../architecture/tool-calls.md).
 
 ## MESSAGES_SNAPSHOT
 
-The run's input messages plus what the run produced. AG-UI has no other way to change or take back a streamed tool call.
+The run's input messages, without activity and reasoning messages (the client keeps its own), plus what the run produced. AG-UI has no other way to change or take back a streamed tool call.
 
 | When                                                 | Snapshot               |
 | ---------------------------------------------------- | ---------------------- |

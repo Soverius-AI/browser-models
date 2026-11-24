@@ -11,8 +11,7 @@ stateDiagram-v2
   checking --> downloadable
   checking --> unavailable
   downloadable --> downloading: download()
-  downloading --> checking: done (refresh)
-  downloading --> downloadable: load failed (error)
+  downloading --> checking: done or failed (refresh; a failure also sets error)
   available --> downloadable: deleteModel()
 ```
 

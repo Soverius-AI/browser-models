@@ -130,3 +130,25 @@ describe('OutputParser thinking', () => {
     expect(parts).toEqual([]);
   });
 });
+
+describe('OutputParser tool blocks', () => {
+  it('writes a tool call the way it reads one', () => {
+    const body = '{"name":"getWeather","arguments":{"city":"Vienna"}}';
+    const block = OutputParser.toolCall(body);
+    expect(block).toBe('```tool_call\n' + body + '\n```');
+    const parser = new OutputParser();
+    expect([...parser.push(`Sure.\n${block}`), ...parser.end()]).toEqual([
+      { kind: 'text', text: 'Sure.\n' },
+      { kind: 'tool-call', raw: body },
+    ]);
+  });
+
+  it('writes a tool result as JSON with the name, which a model that echoes it never shows', () => {
+    const block = OutputParser.toolResult('getWeather', 'Sunny, "22°C"\n');
+    expect(block).toBe(
+      '```tool_result\n{"name":"getWeather","result":"Sunny, \\"22°C\\"\\n"}\n```',
+    );
+    const parser = new OutputParser();
+    expect([...parser.push(block), ...parser.end()]).toEqual([]);
+  });
+});

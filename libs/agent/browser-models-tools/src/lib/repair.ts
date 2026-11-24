@@ -1,16 +1,17 @@
-import type { JsonSchema } from '@soverius-ai/browser-models';
 import type {
   CheckedCall,
+  JsonSchema,
   RepairStep,
   ToolCall,
   ToolSpec,
-} from '@soverius-ai/browser-models-agui';
+} from '@soverius-ai/browser-models';
 import { jsonrepair } from 'jsonrepair';
 import { asObject } from './json.ts';
 import { closeJson } from './partial-json.ts';
 import { ArgumentsSchema } from './schema.ts';
+import type { ToolCheck } from './tools.ts';
 
-export type { RepairStep } from '@soverius-ai/browser-models-agui';
+export type { RepairStep } from '@soverius-ai/browser-models';
 /** A repaired call and the steps it took, or why it cannot be repaired. */
 export type RepairResult = CheckedCall;
 
@@ -26,6 +27,8 @@ export interface RepairOptions {
     /** The raw call that had the error. */
     raw: string,
   ) => Promise<string | undefined>;
+  /** Checks after the schema; a failed one is fixed like a schema error. */
+  readonly checks?: readonly ToolCheck[];
   /** Your own last-chance fix. Return a call to use it, or undefined to give up. */
   readonly hook?: (input: {
     readonly raw: string;
@@ -135,7 +138,7 @@ export class ToolCallRepair {
     if (tool.name !== call.name) steps.push('name');
 
     let args = parseArguments(call.arguments ?? call.parameters ?? {}, steps);
-    let check = checkArguments(args, tool);
+    let check = this.#check(args, tool);
 
     if (check.errors.length > 0 && this.#options.reask) {
       // A failing re-ask (for example an engine that rejects the schema as a constraint)
@@ -148,7 +151,7 @@ export class ToolCallRepair {
       }
       if (answer !== undefined) {
         args = unwrapCall(parseArguments(answer, steps));
-        check = checkArguments(args, tool);
+        check = this.#check(args, tool);
         steps.push('reask');
       }
     }
@@ -164,6 +167,28 @@ export class ToolCallRepair {
       call: { name: tool.name, arguments: check.value },
       steps,
     };
+  }
+
+  /** The schema check, then the tool's own checks once the schema holds. */
+  #check(args: unknown, tool: ToolSpec) {
+    const check = checkArguments(args, tool);
+    if (check.errors.length > 0) return check;
+    const errors = (this.#options.checks ?? [])
+      .filter((own) => own.tool === tool.name)
+      .flatMap((own) => ToolCallRepair.#ask(own, check.value) ?? []);
+    return { ...check, errors };
+  }
+
+  /** A check that throws must not end the run: it is skipped, the call counts as fine. */
+  static #ask(
+    check: ToolCheck,
+    args: Readonly<Record<string, unknown>>,
+  ): string | undefined {
+    try {
+      return check.check(args);
+    } catch {
+      return undefined;
+    }
   }
 }
 

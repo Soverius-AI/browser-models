@@ -1,6 +1,9 @@
 import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 import { ToolCalling } from '@soverius-ai/browser-models-tools';
-import { OpenGenerativeUi } from '@soverius-ai/browser-models-tools/copilotkit';
+import {
+  OpenGenerativeUi,
+  SandboxedUiCheck,
+} from '@soverius-ai/browser-models-tools/copilotkit';
 import { WebMcpTools } from '@soverius-ai/browser-models-tools/webmcp';
 import {
   Context7Tools,
@@ -19,6 +22,8 @@ const engines = createExampleModels();
 export const context7 = new Context7Tools();
 const tools = new ToolCalling({
   localTools: [currentTime, new WebMcpTools(), context7],
+  // A generated page whose script looks for elements the page lacks goes back to the model.
+  checks: [new SandboxedUiCheck()],
 });
 
 // 3. Agent (@soverius-ai/browser-models-agui): CopilotKit talks to it like to any AG-UI agent.

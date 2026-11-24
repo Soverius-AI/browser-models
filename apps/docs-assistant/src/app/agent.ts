@@ -2,7 +2,11 @@ import { ModelStore } from '@soverius-ai/browser-models';
 import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 import { WebLlmEngine } from '@soverius-ai/browser-models/web-llm';
 import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
-import { ToolCalling, type LocalTool } from '@soverius-ai/browser-models-tools';
+import {
+  ToolCalling,
+  type LocalTool,
+  type ToolCheck,
+} from '@soverius-ai/browser-models-tools';
 import { demoEngine } from '@soverius-ai/example-shared';
 import { DocsIndex } from './docs-index';
 
@@ -43,12 +47,28 @@ const searchDocs: LocalTool<{ query: string }> = {
     properties: {
       query: {
         type: 'string',
-        description: 'Keywords, for example "prompt api availability"',
+        description:
+          'Words from the question, for example "prompt api availability"',
       },
     },
     required: ['query'],
   },
   execute: async ({ query }) => docs.search(query),
+};
+
+/**
+ * A small model sometimes searches for the placeholder of a tool call it has seen: "…", "...",
+ * "keyword", "search terms". The check sends such a call back to the model, which then searches
+ * with the question's words. Any other query is searched, also one word like "query".
+ */
+const realQuery: ToolCheck = {
+  tool: 'searchDocs',
+  check: ({ query }) =>
+    /^\s*(…|\.\.\.|(your )?(keywords?|search (terms?|keywords?))( here)?)\s*$/i.test(
+      String(query),
+    )
+      ? 'the query is a placeholder; search with words from the question'
+      : undefined,
 };
 
 const readDocs: LocalTool<{ id: string }> = {
@@ -78,7 +98,11 @@ export const agent = new BrowserModelsAgent({
   agentId: 'default',
   models: engines,
   defaultModel: 'gemma',
-  tools: new ToolCalling({ localTools: [searchDocs, readDocs], maxSteps: 6 }),
+  tools: new ToolCalling({
+    localTools: [searchDocs, readDocs],
+    checks: [realQuery],
+    maxSteps: 6,
+  }),
 });
 
 /** How the model should answer: given to CopilotKit as agent context. */

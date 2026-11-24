@@ -8,10 +8,11 @@ Small models write broken calls. `ToolCalling` repairs every call before it runs
 
 ## Call formats
 
-| Format | Example                                          |
-| ------ | ------------------------------------------------ |
-| fenced | ` ```tool_call {"name": …, "arguments": …} ``` ` |
-| tags   | `<tool_call>{…}</tool_call>`                     |
+| Format     | Example                                                                  |
+| ---------- | ------------------------------------------------------------------------ |
+| fenced     | ` ```tool_call {"name": …, "arguments": …} ``` `                         |
+| tags       | `<tool_call>{…}</tool_call>`                                             |
+| name first | `getWeather` on a line, then `{"city": …}`; or `getWeather({"city": …})` |
 
 ## Streaming
 
@@ -36,15 +37,15 @@ repaired   START  ARGS {"days":"3"   CUSTOM  MESSAGES_SNAPSHOT {"days":3}  END
 
 ## Repair
 
-Every call is repaired before it runs. The steps add up: `steps` lists every step a call took.
+Every call is repaired before it runs. The steps add up: `steps` lists every step a call took. After the schema, the `checks` of the tool run ([Options](./index.md#options)).
 
-| Step     | Fixes                                                                                               |
-| -------- | --------------------------------------------------------------------------------------------------- |
-| `json`   | broken JSON (`jsonrepair`), arguments as a JSON string                                              |
-| `name`   | another spelling of a tool name, see below                                                          |
-| `coerce` | `"5"` → `5`, `"true"` → `true`, `5` → `"5"`, value → array, enum case, `null`, extra keys, defaults |
-| `reask`  | arguments still invalid: one more model call with the call, the error and the schema                |
-| `hook`   | everything else failed: `repairHook({ raw, error, tools })`; then the only step reported            |
+| Step     | Fixes                                                                                                            |
+| -------- | ---------------------------------------------------------------------------------------------------------------- |
+| `json`   | broken JSON (`jsonrepair`), arguments as a JSON string                                                           |
+| `name`   | another spelling of a tool name, see below                                                                       |
+| `coerce` | `"5"` → `5`, `"true"` → `true`, `5` → `"5"`, value → array, enum case, `null`, extra keys, defaults              |
+| `reask`  | arguments still invalid, or a `checks` entry failed: one more model call with the call, the error and the schema |
+| `hook`   | everything else failed: `repairHook({ raw, error, tools })`; then the only step reported                         |
 
 | Model writes                                              | Tool         |
 | --------------------------------------------------------- | ------------ |

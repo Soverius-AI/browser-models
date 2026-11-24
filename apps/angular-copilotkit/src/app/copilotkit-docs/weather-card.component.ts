@@ -11,15 +11,23 @@ type WeatherArgs = { city: string };
 
 @Component({
   selector: "app-weather-card",
+  // Not in the docs: the classes. The docs' card is unstyled.
   template: `
     @let call = streaming(toolCall());
     @if (call.status === "complete") {
-      <article>
-        <strong>{{ call.args.city }}</strong>
-        <p>{{ call.result }}</p>
+      <article class="card card-border my-2 max-w-xs bg-base-100 shadow-sm">
+        <div class="card-body flex-row items-center gap-4 p-4">
+          <span class="text-4xl" aria-hidden="true">☀️</span>
+          <div>
+            <strong class="card-title text-base">{{ call.args.city }}</strong>
+            <p class="text-sm opacity-80">{{ call.result }}</p>
+          </div>
+        </div>
       </article>
     } @else {
-      <p>Loading weather for {{ call.args.city ?? "…" }}</p>
+      <p class="my-2 animate-pulse text-sm opacity-70">
+        Loading weather for {{ call.args.city ?? "…" }}
+      </p>
     }
   `,
 })

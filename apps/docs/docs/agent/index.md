@@ -4,7 +4,7 @@ title: BrowserModelsAgent
 
 # BrowserModelsAgent
 
-Layer 2, `@soverius-ai/browser-models-agui`: an AG-UI `AbstractAgent` on the engines. CopilotKit or any AG-UI client works unchanged.
+Layer 3, `@soverius-ai/browser-models-agui`: an AG-UI `AbstractAgent` on the engines. CopilotKit or any AG-UI client works unchanged.
 
 ```bash
 pnpm add @soverius-ai/browser-models @soverius-ai/browser-models-agui
@@ -35,7 +35,7 @@ npm ls @ag-ui/client                           # one version
 import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 
-// Layer 2: an AG-UI agent on the engine. Any AG-UI client runs it; here its own runAgent.
+// Layer 3: an AG-UI agent on the engine. Any AG-UI client runs it; here its own runAgent.
 const agent = new BrowserModelsAgent({
   models: { nano: new PromptApiEngine() },
   defaultModel: 'nano',
@@ -102,10 +102,11 @@ Per framework: [Angular](../frameworks/angular.md) · [React](../frameworks/reac
 
 Explicit; nothing falls back.
 
-| Unknown id                                     | Result                                          |
-| ---------------------------------------------- | ----------------------------------------------- |
-| `agent.selectModel('x')`                       | throws `Unknown model "x".`                     |
-| `forwardedProps: { soverius: { model: 'x' } }` | the run fails: `RUN_ERROR` `Unknown model "x".` |
+| Unknown id                                      | Result                                                         |
+| ----------------------------------------------- | -------------------------------------------------------------- |
+| `new BrowserModelsAgent({ defaultModel: 'x' })` | throws `defaultModel "x" is not one of the registered models.` |
+| `agent.selectModel('x')`                        | throws `Unknown model "x".`                                    |
+| `forwardedProps: { soverius: { model: 'x' } }`  | the run fails: `RUN_ERROR` `Unknown model "x".`                |
 
 ```ts
 agent.selectModel('nano'); // all following runs, also on the clones a client makes

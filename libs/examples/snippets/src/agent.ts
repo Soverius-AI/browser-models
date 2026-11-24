@@ -1,7 +1,7 @@
 import { PromptApiEngine } from '@soverius-ai/browser-models/prompt-api';
 import { BrowserModelsAgent } from '@soverius-ai/browser-models-agui';
 
-// Layer 2: an AG-UI agent on the engine. Any AG-UI client runs it; here its own runAgent.
+// Layer 3: an AG-UI agent on the engine. Any AG-UI client runs it; here its own runAgent.
 const agent = new BrowserModelsAgent({
   models: { nano: new PromptApiEngine() },
   defaultModel: 'nano',

@@ -7,16 +7,23 @@
   "sideEffects": false,
   "license": "MIT",
   "homepage": "https://browser-models.soverius.ai",
-  "description": "Tool calling for @soverius-ai/browser-models-agui: repair, schema checks, MCP, WebMCP and CopilotKit generative UI.",
+  "description": "Tool calling for @soverius-ai/browser-models engines and the AG-UI agent: repair, schema checks, MCP, WebMCP and CopilotKit generative UI.",
   "dependencies": {
     "@cfworker/json-schema": "^4.1.6",
     "jsonrepair": "^3.15.0"
   },
   "peerDependencies": {
     "@soverius-ai/browser-models": "0.2.2",
-    "@soverius-ai/browser-models-agui": "0.2.2",
     "@ag-ui/client": "^1.0.0",
     "rxjs": "^7.8.0"
+  },
+  "peerDependenciesMeta": {
+    "@ag-ui/client": {
+      "optional": true
+    },
+    "rxjs": {
+      "optional": true
+    }
   },
   "exports": {
     "./package.json": "./package.json",
